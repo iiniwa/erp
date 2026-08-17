@@ -208,7 +208,7 @@ NN: 通し番号（2桁、月次リセット）
 - 「携帯・代表・FAX・自宅」は固定値としてマスタ管理する（`at_label_type`の1〜4）。フロントの入力UIでは選択式とする
 - 上記4種以外を入力したい場合は`at_label_type = 6（自由入力）`を選択し、`at_label_free`にテキストを入力する
 - **緊急連絡先（`at_label_type = 5`）は、従業員本人のアドレス（`address.address_user_code`が非NULLのレコード）に限り使用可能とする**。取引先等（`address_user_code`がNULL）のアドレスには付与できない
-- 緊急連絡先は**1つのアドレスにつき1件まで**とする（同一`address_id`内で`at_label_type = 5`を複数登録することはできない。アプリケーション側でのバリデーション、または`address_id`と`at_label_type=5`の複合ユニーク制約で担保する）
+- 緊急連絡先は**1つのアドレスにつき1件まで**とする（同一`address_id`内で`at_label_type = 5`を複数登録することはできない）。単純な`UNIQUE(address_id, at_label_type)`は他のラベル種別（携帯・代表等）の複数登録も妨げてしまうため不適切。アプリケーション側でのバリデーションに加えて、DB側で担保する場合は`at_label_type = 5`の行にのみ非NULLとなる生成列（例: `emergency_flag`）を追加し、`UNIQUE(address_id, emergency_flag)`とする（MariaDBのユニークインデックスはNULLを複数許容するため、他のラベル種別には影響しない）
 - **従業員のプライマリ（sort=1）は「携帯」で固定する運用**とする（`at_label_type = 1`を第一連絡先として登録する）。プライマリ変更時にも携帯番号がsort=1を維持するよう、フロント側の並び替えUIで制御する
 
 ---

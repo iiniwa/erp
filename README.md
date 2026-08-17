@@ -29,9 +29,12 @@ Composeが自動で読み込むため `docker compose` 実行時に `--env-file`
 ```sh
 git clone <このリポジトリ>
 cd erp
-make setup        # docker/.env を作成
+make setup        # docker/.env を作成（DB/内部API/SFTPGo管理者パスワードはランダム生成）
 make build dev    # 開発環境イメージをビルド
 ```
+
+開発用のポート（DB/backend/frontend/SFTPGo）はデフォルトで`127.0.0.1`にのみ
+バインドされる（`docker/.env`の`BIND_ADDRESS`で変更可能）。
 
 `docker/.env` の `RAILS_MASTER_KEY` は各自ローカルで発行する（詳しくは
 [Railsの認証情報](#railsの認証情報) を参照）。値が空でも開発環境では動作するが、
@@ -60,6 +63,7 @@ docker compose -f docker/docker-compose.prod.yml up
 make setup       # docker/.env作成
 make build dev    # 開発環境イメージのビルド
 make build prod   # 本番環境イメージのビルド
+make lint         # frontend/backend双方のLintを実行
 ```
 
 `frontend/` 配下:
@@ -91,11 +95,11 @@ make test          # RSpec実行
 
 `backend/config/master.key` はGit管理対象外（公開リポジトリのため）。
 ローカルで新規に鍵ペアを作りたい場合は、`backend/config/credentials.yml.enc`
-を削除した上で以下を実行する。
+を削除した上で、backendのDocker Composeサービス経由で実行する（ローカルに
+Ruby/Bundlerは不要）。
 
 ```sh
-cd backend
-EDITOR="tee" bin/rails credentials:edit
+docker compose -f docker/docker-compose.yml run --rm -it -e EDITOR=nano backend bin/rails credentials:edit
 ```
 
 チームで鍵を共有する場合は、`config/master.key` の内容をパスワードマネージャー等

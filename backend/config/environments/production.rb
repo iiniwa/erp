@@ -3,6 +3,13 @@ require "active_support/core_ext/integer/time"
 Rails.application.configure do
   # Settings specified here will take precedence over those in config/application.rb.
 
+  # docker-compose.prod.yml does not provision a Redis service. Action Cable's
+  # production adapter (config/cable.yml) silently falls back to localhost
+  # otherwise, which would fail at connection time rather than at boot.
+  if ENV["REDIS_URL"].blank?
+    raise "REDIS_URL must be set in production (no Redis service is provisioned by docker-compose.prod.yml)"
+  end
+
   # Code is not reloaded between requests.
   config.enable_reloading = false
 

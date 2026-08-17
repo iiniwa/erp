@@ -36,5 +36,5 @@ db-seed: ## シード投入（管理ユーザーのみ）
 lint: ## RuboCop チェック
 	$(RUN_DEV) bin/rubocop
 
-test: ## RSpec実行
-	$(RUN_DEV) bundle exec rspec
+test: ## RSpec実行（テストDBを使うようRAILS_ENVを上書き）
+	$(COMPOSE_DEV) run --rm -e RAILS_ENV=test backend bundle exec rspec

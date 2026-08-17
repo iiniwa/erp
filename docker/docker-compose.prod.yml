@@ -33,8 +33,11 @@ services:
       FRONTEND_ORIGIN: ${FRONTEND_ORIGIN:?FRONTEND_ORIGIN is required}
       INTERNAL_API_SECRET: ${INTERNAL_API_SECRET:?INTERNAL_API_SECRET is required}
       RAILS_MASTER_KEY: ${RAILS_MASTER_KEY:?RAILS_MASTER_KEY is required}
+      # No Redis service is provisioned by this Compose stack; point this at
+      # an externally managed Redis instance (required for Action Cable).
+      REDIS_URL: ${REDIS_URL:?REDIS_URL is required (see docker/docker-compose.prod.yml)}
     ports:
-      - "${BACKEND_PORT:-3001}:3000"
+      - "${BIND_ADDRESS:-127.0.0.1}:${BACKEND_PORT:-3001}:3000"
     depends_on:
       db:
         condition: service_healthy
@@ -50,7 +53,7 @@ services:
       BACKEND_INTERNAL_URL: http://backend:3000
       INTERNAL_API_SECRET: ${INTERNAL_API_SECRET:?INTERNAL_API_SECRET is required}
     ports:
-      - "${FRONTEND_PORT:-3000}:3000"
+      - "${BIND_ADDRESS:-127.0.0.1}:${FRONTEND_PORT:-3000}:3000"
     depends_on:
       - backend
 
@@ -61,8 +64,8 @@ services:
       SFTPGO_DEFAULT_ADMIN_USERNAME: ${SFTPGO_ADMIN_USER:?SFTPGO_ADMIN_USER is required}
       SFTPGO_DEFAULT_ADMIN_PASSWORD: ${SFTPGO_ADMIN_PASSWORD:?SFTPGO_ADMIN_PASSWORD is required}
     ports:
-      - "${SFTPGO_WEBADMIN_PORT:-8080}:8080"
-      - "${SFTPGO_SFTP_PORT:-2022}:2022"
+      - "${BIND_ADDRESS:-127.0.0.1}:${SFTPGO_WEBADMIN_PORT:-8080}:8080"
+      - "${BIND_ADDRESS:-127.0.0.1}:${SFTPGO_SFTP_PORT:-2022}:2022"
     volumes:
       - sftpgo_data:/srv/sftpgo/data
       - sftpgo_config:/srv/sftpgo/config

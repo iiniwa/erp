@@ -1,36 +1,34 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# frontend
 
-## Getting Started
+Next.js（App Router）+ Tailwind CSS。詳細は[リポジトリルートのREADME](../README.md)、
+仕様は[docs/ERP_phase1_spec.md](../docs/ERP_phase1_spec.md)を参照。
 
-First, run the development server:
+## 開発サーバーの起動
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+このプロジェクトはDocker上で完結する構成のため、ホストにNode.jsのインストールは不要。
+
+```sh
+# リポジトリルートで
+make setup
+make build dev
+docker compose -f docker/docker-compose.yml up frontend
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+http://localhost:3000 で確認できる。`src/app/page.tsx` を編集すると自動でリロードされる。
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## よく使うコマンド
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```sh
+make build dev   # 開発イメージのビルド
+make build prod  # 本番イメージのビルド
+make lint         # ESLint / Prettier チェック
+make test         # フロントエンドテスト実行
+```
 
-## Learn More
+いずれも `frontend/` 配下で実行する（内部的に `docker compose run --rm frontend ...` を呼ぶ）。
 
-To learn more about Next.js, take a look at the following resources:
+## この版のNext.jsについて
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+このリポジトリのNext.jsは学習データより新しいバージョンを使用しており、API・規約が
+異なる場合がある。コードを書く前に[AGENTS.md](./AGENTS.md)の指示に従い、
+`node_modules/next/dist/docs/` 配下の該当ガイドを確認すること。
