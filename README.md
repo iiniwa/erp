@@ -22,59 +22,69 @@
 
 必要なもの: Docker / Docker Compose
 
+Makefileは**環境構築（イメージのビルド）専任**。起動・停止は `docker compose`
+を直接使う。
+
 ```sh
 git clone <このリポジトリ>
 cd erp
-make setup   # .env を作成し、イメージをビルドする
+make setup        # .env を作成
+make build dev    # 開発環境イメージをビルド
 ```
 
 `.env` の `RAILS_MASTER_KEY` は各自ローカルで発行する（詳しくは
-[backend/config/master.key の発行](#railsの認証情報) を参照）。値が空でも
-開発環境では動作するが、Active Storage 等の暗号化情報を扱う場合は必須になる。
+[Railsの認証情報](#railsの認証情報) を参照）。値が空でも開発環境では動作するが、
+本番環境（`docker-compose.prod.yml`）では必須。
 
 ```sh
-make up      # フロントエンド／バックエンド／DB／SFTPGoを起動
+docker compose --env-file .env -f docker/docker-compose.yml up
 ```
 
 - フロントエンド: http://localhost:3000
 - バックエンドAPI: http://localhost:3001 （ヘルスチェック: `/up`, `/api/v1/health`）
 - SFTPGo管理画面: http://localhost:8080
 
+本番相当のイメージ（`backend/Dockerfile`, `frontend/Dockerfile`）で動作確認したい場合:
+
+```sh
+make build prod
+docker compose --env-file .env -f docker/docker-compose.prod.yml up
+```
+
 ## よく使うコマンド
 
 ルート直下:
 
 ```sh
-make up       # 全コンテナ起動
-make down     # 全コンテナ停止・削除
-make build    # イメージ再ビルド
-make logs     # ログ追跡
-make ps       # コンテナ状態確認
+make setup       # .env作成
+make build dev    # 開発環境イメージのビルド
+make build prod   # 本番環境イメージのビルド
 ```
 
 `frontend/` 配下:
 
 ```sh
-make setup    # イメージビルド（依存パッケージインストール）
-make dev      # 開発サーバー起動
-make lint     # ESLint / Prettier チェック
-make test     # フロントエンドテスト実行
-make build    # 本番ビルド
+make setup       # 開発イメージビルド
+make build dev    # 開発環境イメージのビルド
+make build prod   # 本番環境イメージのビルド
+make lint         # ESLint / Prettier チェック
+make test         # フロントエンドテスト実行
 ```
 
 `backend/` 配下:
 
 ```sh
-make setup       # bundle install、DBセットアップ
-make dev         # Railsサーバー起動
-make db-migrate  # マイグレーション実行
-make db-seed     # シード投入（管理ユーザーのみ）
-make lint        # RuboCop チェック
-make test        # RSpec実行
+make setup        # 開発イメージビルド + DBセットアップ
+make build dev     # 開発環境イメージのビルド
+make build prod    # 本番環境イメージのビルド
+make db-migrate    # マイグレーション実行
+make db-seed       # シード投入（管理ユーザーのみ）
+make lint          # RuboCop チェック
+make test          # RSpec実行
 ```
 
-いずれも内部的に `docker compose` を呼び出すため、ローカルにNode.js/Rubyの
-インストールは不要（Dockerさえあれば動作する）。
+`lint`/`test`/`db-*` は `docker compose run --rm` 経由で開発イメージ上で実行するため、
+ローカルにNode.js/Rubyのインストールは不要（Dockerさえあれば動作する）。
 
 ## Railsの認証情報
 

@@ -1,26 +1,40 @@
-COMPOSE = docker compose --env-file ../.env -f ../docker/docker-compose.yml
-RUN = $(COMPOSE) run --rm backend
+# 環境構築専用のMakefile。サーバー起動は `docker compose up` を直接使う。
+#   make build dev   開発イメージのビルド
+#   make build prod  本番イメージのビルド
 
-.PHONY: setup dev db-migrate db-seed db-create lint test
+COMPOSE_DEV = docker compose --env-file ../.env -f ../docker/docker-compose.yml
+COMPOSE_PROD = docker compose --env-file ../.env -f ../docker/docker-compose.prod.yml
+RUN_DEV = $(COMPOSE_DEV) run --rm backend
 
-setup: ## bundle install、DBセットアップ
-	$(COMPOSE) build backend
-	$(RUN) bin/rails db:prepare
+.PHONY: setup build dev prod db-create db-migrate db-seed lint test
 
-dev: ## Railsサーバー起動（docker compose経由）
-	$(COMPOSE) up backend
+setup: ## bundle install相当（イメージビルド）+ DBセットアップ
+	$(COMPOSE_DEV) build backend
+	$(RUN_DEV) bin/rails db:prepare
+
+build: ## `make build dev` または `make build prod` でイメージをビルド
+ifneq (,$(filter dev,$(MAKECMDGOALS)))
+	$(COMPOSE_DEV) build backend
+else ifneq (,$(filter prod,$(MAKECMDGOALS)))
+	$(COMPOSE_PROD) build backend
+else
+	@echo "Usage: make build dev|prod" && exit 1
+endif
+
+dev prod: ## build のターゲット引数（単体では何もしない）
+	@:
 
 db-create:
-	$(RUN) bin/rails db:create
+	$(RUN_DEV) bin/rails db:create
 
 db-migrate: ## マイグレーション実行
-	$(RUN) bin/rails db:migrate
+	$(RUN_DEV) bin/rails db:migrate
 
 db-seed: ## シード投入（管理ユーザーのみ）
-	$(RUN) bin/rails db:seed
+	$(RUN_DEV) bin/rails db:seed
 
 lint: ## RuboCop チェック
-	$(RUN) bin/rubocop
+	$(RUN_DEV) bin/rubocop
 
 test: ## RSpec実行
-	$(RUN) bundle exec rspec
+	$(RUN_DEV) bundle exec rspec

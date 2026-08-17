@@ -1,19 +1,30 @@
-COMPOSE = docker compose --env-file ../.env -f ../docker/docker-compose.yml
-RUN = $(COMPOSE) run --rm frontend
+# 環境構築専用のMakefile。開発サーバー起動は `docker compose up` を直接使う。
+#   make build dev   開発イメージのビルド
+#   make build prod  本番イメージのビルド
 
-.PHONY: setup dev lint test build
+COMPOSE_DEV = docker compose --env-file ../.env -f ../docker/docker-compose.yml
+COMPOSE_PROD = docker compose --env-file ../.env -f ../docker/docker-compose.prod.yml
+RUN_DEV = $(COMPOSE_DEV) run --rm frontend
 
-setup: ## 依存パッケージインストール
-	$(COMPOSE) build frontend
+.PHONY: setup build dev prod lint test
 
-dev: ## 開発サーバー起動（docker compose経由）
-	$(COMPOSE) up frontend
+setup: ## 依存パッケージインストール相当（イメージビルド）
+	$(COMPOSE_DEV) build frontend
+
+build: ## `make build dev` または `make build prod` でイメージをビルド
+ifneq (,$(filter dev,$(MAKECMDGOALS)))
+	$(COMPOSE_DEV) build frontend
+else ifneq (,$(filter prod,$(MAKECMDGOALS)))
+	$(COMPOSE_PROD) build frontend
+else
+	@echo "Usage: make build dev|prod" && exit 1
+endif
+
+dev prod: ## build のターゲット引数（単体では何もしない）
+	@:
 
 lint: ## ESLint / Prettier チェック
-	$(RUN) npm run lint
+	$(RUN_DEV) npm run lint
 
 test: ## フロントエンドテスト実行
-	$(RUN) npm test
-
-build: ## 本番ビルド
-	$(RUN) npm run build
+	$(RUN_DEV) npm test
