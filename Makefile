@@ -2,17 +2,20 @@
 #   make build dev   開発環境イメージのビルド（docker/docker-compose.yml）
 #   make build prod  本番環境イメージのビルド（docker/docker-compose.prod.yml）
 #
+# docker/.env をcompose fileと同じディレクトリに置いているため、
+# `docker compose` 実行時に --env-file を指定する必要はない。
+#
 # 起動例:
-#   docker compose --env-file .env -f docker/docker-compose.yml up       (dev)
-#   docker compose --env-file .env -f docker/docker-compose.prod.yml up  (prod)
+#   docker compose -f docker/docker-compose.yml up       (dev)
+#   docker compose -f docker/docker-compose.prod.yml up  (prod)
 
-COMPOSE_DEV = docker compose --env-file .env -f docker/docker-compose.yml
-COMPOSE_PROD = docker compose --env-file .env -f docker/docker-compose.prod.yml
+COMPOSE_DEV = docker compose -f docker/docker-compose.yml
+COMPOSE_PROD = docker compose -f docker/docker-compose.prod.yml
 
 .PHONY: setup build dev prod
 
-setup: ## .env作成（初回のみ）
-	@test -f .env || cp .env.example .env
+setup: ## docker/.env作成（初回のみ）
+	@test -f docker/.env || cp docker/.env.example docker/.env
 
 build: ## `make build dev` または `make build prod` でイメージをビルド
 ifneq (,$(filter dev,$(MAKECMDGOALS)))

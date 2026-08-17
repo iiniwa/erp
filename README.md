@@ -23,21 +23,22 @@
 必要なもの: Docker / Docker Compose
 
 Makefileは**環境構築（イメージのビルド）専任**。起動・停止は `docker compose`
-を直接使う。
+を直接使う。`docker/.env` はcompose fileと同じディレクトリに置いており、
+Composeが自動で読み込むため `docker compose` 実行時に `--env-file` の指定は不要。
 
 ```sh
 git clone <このリポジトリ>
 cd erp
-make setup        # .env を作成
+make setup        # docker/.env を作成
 make build dev    # 開発環境イメージをビルド
 ```
 
-`.env` の `RAILS_MASTER_KEY` は各自ローカルで発行する（詳しくは
+`docker/.env` の `RAILS_MASTER_KEY` は各自ローカルで発行する（詳しくは
 [Railsの認証情報](#railsの認証情報) を参照）。値が空でも開発環境では動作するが、
 本番環境（`docker-compose.prod.yml`）では必須。
 
 ```sh
-docker compose --env-file .env -f docker/docker-compose.yml up
+docker compose -f docker/docker-compose.yml up
 ```
 
 - フロントエンド: http://localhost:3000
@@ -48,7 +49,7 @@ docker compose --env-file .env -f docker/docker-compose.yml up
 
 ```sh
 make build prod
-docker compose --env-file .env -f docker/docker-compose.prod.yml up
+docker compose -f docker/docker-compose.prod.yml up
 ```
 
 ## よく使うコマンド
@@ -56,7 +57,7 @@ docker compose --env-file .env -f docker/docker-compose.prod.yml up
 ルート直下:
 
 ```sh
-make setup       # .env作成
+make setup       # docker/.env作成
 make build dev    # 開発環境イメージのビルド
 make build prod   # 本番環境イメージのビルド
 ```

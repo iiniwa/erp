@@ -2,8 +2,8 @@
 #   make build dev   開発イメージのビルド
 #   make build prod  本番イメージのビルド
 
-COMPOSE_DEV = docker compose --env-file ../.env -f ../docker/docker-compose.yml
-COMPOSE_PROD = docker compose --env-file ../.env -f ../docker/docker-compose.prod.yml
+COMPOSE_DEV = docker compose -f ../docker/docker-compose.yml
+COMPOSE_PROD = docker compose -f ../docker/docker-compose.prod.yml
 RUN_DEV = $(COMPOSE_DEV) run --rm backend
 
 .PHONY: setup build dev prod db-create db-migrate db-seed lint test

@@ -1,5 +1,5 @@
-# Root-level local environment file (see .env.example)
-/.env
+# Local environment file (see docker/.env.example)
+/docker/.env
 
 # OS / editor cruft
 .DS_Store
