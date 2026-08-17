@@ -1,0 +1,85 @@
+name: erp
+
+services:
+  db:
+    image: mariadb:11
+    restart: unless-stopped
+    environment:
+      MARIADB_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-root}
+      MARIADB_DATABASE: ${DB_NAME:-app_development}
+      MARIADB_USER: ${DB_USERNAME:-app}
+      MARIADB_PASSWORD: ${DB_PASSWORD:-app}
+    ports:
+      - "${DB_PORT:-3306}:3306"
+    volumes:
+      - db_data:/var/lib/mysql
+      - ./mariadb/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  backend:
+    build:
+      context: ../backend
+      dockerfile: Dockerfile.dev
+    restart: unless-stopped
+    environment:
+      RAILS_ENV: development
+      DB_HOST: db
+      DB_PORT: 3306
+      DB_USERNAME: ${DB_USERNAME:-app}
+      DB_PASSWORD: ${DB_PASSWORD:-app}
+      FRONTEND_ORIGIN: http://localhost:3000
+      INTERNAL_API_SECRET: ${INTERNAL_API_SECRET:-dev-internal-secret}
+      RAILS_MASTER_KEY: ${RAILS_MASTER_KEY:-}
+    ports:
+      - "${BACKEND_PORT:-3001}:3000"
+    volumes:
+      - ../backend:/rails
+      - backend_bundle:/usr/local/bundle
+    depends_on:
+      db:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: ../frontend
+      dockerfile: Dockerfile.dev
+    restart: unless-stopped
+    environment:
+      NEXTAUTH_URL: http://localhost:3000
+      BACKEND_INTERNAL_URL: http://backend:3000
+      INTERNAL_API_SECRET: ${INTERNAL_API_SECRET:-dev-internal-secret}
+    ports:
+      - "${FRONTEND_PORT:-3000}:3000"
+    volumes:
+      - ../frontend:/app
+      - frontend_node_modules:/app/node_modules
+      - frontend_next:/app/.next
+    depends_on:
+      - backend
+
+  sftpgo:
+    image: drakkan/sftpgo:v2
+    restart: unless-stopped
+    environment:
+      SFTPGO_DEFAULT_ADMIN_USERNAME: ${SFTPGO_ADMIN_USER:-admin}
+      SFTPGO_DEFAULT_ADMIN_PASSWORD: ${SFTPGO_ADMIN_PASSWORD:-admin12345}
+    ports:
+      - "${SFTPGO_WEBADMIN_PORT:-8080}:8080"
+      - "${SFTPGO_SFTP_PORT:-2022}:2022"
+    volumes:
+      - sftpgo_data:/srv/sftpgo/data
+      - sftpgo_config:/srv/sftpgo/config
+      - sftpgo_backups:/srv/sftpgo/backups
+
+volumes:
+  db_data:
+  backend_bundle:
+  frontend_node_modules:
+  frontend_next:
+  sftpgo_data:
+  sftpgo_config:
+  sftpgo_backups:
