@@ -1,6 +1,11 @@
 class CreateSystems < ActiveRecord::Migration[8.1]
   def change
-    create_table :systems, primary_key: :system_id do |t|
+    # id: false + a manually added (non-auto-incrementing) primary key: t.system
+    # is a singleton, always id=1 (see SystemSetting#force_singleton_id), and
+    # MariaDB rejects a CHECK constraint on an AUTO_INCREMENT column, which is
+    # what Rails' usual `primary_key:` shorthand would create here.
+    create_table :systems, id: false do |t|
+      t.bigint :system_id, null: false
       t.string :system_name
       t.bigint :system_logo_file_id
       t.bigint :system_favicon_file_id
@@ -33,6 +38,8 @@ class CreateSystems < ActiveRecord::Migration[8.1]
       # it impossible to ever insert a second row regardless of caller.
       t.check_constraint "system_id = 1", name: "systems_singleton_id"
     end
+
+    execute "ALTER TABLE systems ADD PRIMARY KEY (system_id)"
 
     add_foreign_key :systems, :users, column: :updated_by, primary_key: :user_code
   end

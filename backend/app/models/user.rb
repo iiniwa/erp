@@ -36,6 +36,7 @@ class User < ApplicationRecord
 
   def authenticate_password(raw_password)
     return false if user_pass.blank?
+    return false if user_is_locked?
 
     BCrypt::Password.new(user_pass) == raw_password
   end

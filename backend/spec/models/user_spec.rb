@@ -43,6 +43,13 @@ RSpec.describe User do
       expect(user.authenticate_password("himitsu")).to be true
       expect(user.authenticate_password("wrong")).to be false
     end
+
+    it "rejects the correct password once the account is locked" do
+      user = build(:user, user_is_locked: true)
+      user.password = "himitsu"
+
+      expect(user.authenticate_password("himitsu")).to be false
+    end
   end
 
   describe "user_id uniqueness" do
