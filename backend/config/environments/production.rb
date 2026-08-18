@@ -10,6 +10,18 @@ Rails.application.configure do
     raise "REDIS_URL must be set in production (no Redis service is provisioned by docker-compose.prod.yml)"
   end
 
+  # Encrypted attributes (e.g. User#user_auth_key) require real generated
+  # keys in production. Run `bin/rails db:encryption:init` and store the
+  # output under credentials `active_record_encryption:` before deploying.
+  ar_encryption_credentials = Rails.application.credentials.active_record_encryption
+  if ar_encryption_credentials.blank?
+    raise "active_record_encryption credentials must be set in production " \
+          "(run bin/rails db:encryption:init and add the output to credentials)"
+  end
+  config.active_record.encryption.primary_key = ar_encryption_credentials[:primary_key]
+  config.active_record.encryption.deterministic_key = ar_encryption_credentials[:deterministic_key]
+  config.active_record.encryption.key_derivation_salt = ar_encryption_credentials[:key_derivation_salt]
+
   # Code is not reloaded between requests.
   config.enable_reloading = false
 

@@ -64,4 +64,11 @@ Rails.application.configure do
 
   # Raise error when a before_action's only/except options reference missing actions.
   config.action_controller.raise_on_missing_callback_actions = true
+
+  # Fixed, non-secret keys so encrypted attributes (e.g. User#user_auth_key)
+  # can be exercised in tests without generating real credentials. Never
+  # reuse these values outside the test environment.
+  config.active_record.encryption.primary_key = "insecure_test_primary_key_do_not_use_in_prod"
+  config.active_record.encryption.deterministic_key = "insecure_test_deterministic_key_do_not_use"
+  config.active_record.encryption.key_derivation_salt = "insecure_test_key_derivation_salt_do_not_use"
 end
