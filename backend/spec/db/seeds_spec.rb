@@ -49,7 +49,10 @@ RSpec.describe "db/seeds.rb" do
     if admin
       address = admin.addresses.first
       if address
-        address.address_tels.delete_all
+        # :delete_all overrides the association's default dependent
+        # strategy (nullify), which would otherwise try to null out
+        # address_tels.address_id and fail its NOT NULL constraint.
+        address.address_tels.delete_all(:delete_all)
         address.delete
         CodeSequence.where(sequence_key: "8-#{Time.current.strftime('%y%m')}").delete_all
       end
