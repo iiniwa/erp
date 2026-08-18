@@ -17,6 +17,7 @@ RSpec.describe User do
     it "never issues the same user_code under concurrent creation", use_transactional_tests: false do
       thread_count = 20
       users = Array.new(thread_count)
+      sequence_key = "9-#{Time.current.strftime('%y%m')}"
 
       # Rails.application.executor.wrap sets up the per-thread execution
       # context ActiveRecord needs (connection checkout/checkin, error
@@ -35,7 +36,7 @@ RSpec.describe User do
       expect(users.map(&:user_code).uniq.length).to eq(thread_count)
     ensure
       User.delete_all
-      CodeSequence.delete_all
+      CodeSequence.where(sequence_key: sequence_key).delete_all
     end
   end
 

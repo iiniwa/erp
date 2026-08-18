@@ -37,7 +37,7 @@ RSpec.describe CodeSequence do
       expect(numbers.uniq.length).to eq(thread_count)
       expect(numbers.sort).to eq((1..thread_count).to_a)
     ensure
-      CodeSequence.delete_all
+      CodeSequence.where(sequence_key: key).delete_all
     end
 
     it "raises once the monthly limit is reached" do

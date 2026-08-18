@@ -26,4 +26,24 @@ RSpec.describe "db/seeds.rb" do
     expect { load Rails.root.join("db/seeds.rb") }.to raise_error(/soft-deleted/)
     expect(User.with_deleted.system_admin.count).to eq(1)
   end
+
+  it "creates only one admin even when db:seed runs concurrently", use_transactional_tests: false do
+    thread_count = 5
+
+    threads = Array.new(thread_count) do
+      Thread.new do
+        Rails.application.executor.wrap do
+          load Rails.root.join("db/seeds.rb")
+        end
+      end
+    end
+    threads.each(&:join)
+
+    expect(User.with_deleted.system_admin.count).to eq(1)
+  ensure
+    AddressTel.delete_all
+    Address.delete_all
+    AddressCategory.delete_all
+    User.delete_all
+  end
 end
