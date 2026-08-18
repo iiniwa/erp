@@ -18,9 +18,14 @@ RSpec.describe User do
       thread_count = 20
       users = Array.new(thread_count)
 
+      # Rails.application.executor.wrap sets up the per-thread execution
+      # context ActiveRecord needs (connection checkout/checkin, error
+      # reporting, etc.) for code running on ad-hoc threads outside the
+      # normal request/example cycle; without it, threads can end up
+      # fighting over a single connection.
       threads = Array.new(thread_count) do |i|
         Thread.new do
-          ActiveRecord::Base.connection_pool.with_connection do
+          Rails.application.executor.wrap do
             users[i] = create(:user)
           end
         end
