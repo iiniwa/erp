@@ -10,16 +10,12 @@ class SystemSetting < ApplicationRecord
 
   enum :bank_account_type, { ordinary: 1, checking: 2 }, validate: { allow_nil: true }
 
-  before_validation :force_singleton_id
   validates :system_id, inclusion: { in: [ 1 ] }
 
+  # find_or_initialize_by sets system_id: 1 on a freshly built record, so
+  # callers never need to (and, per the validation above, aren't allowed to
+  # set it to anything else).
   def self.instance
     find_or_initialize_by(system_id: 1)
-  end
-
-  private
-
-  def force_singleton_id
-    self.system_id = 1
   end
 end
