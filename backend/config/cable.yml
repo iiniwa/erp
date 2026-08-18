@@ -1,0 +1,15 @@
+development:
+  adapter: async
+
+test:
+  adapter: test
+
+production:
+  adapter: redis
+  # `config_for` runs ERB across the whole file regardless of the active
+  # environment, so this needs a fallback even though it's only meaningful in
+  # production. The Compose stack does not provision a Redis service; the
+  # production requirement for REDIS_URL is enforced in
+  # config/environments/production.rb instead.
+  url: <%= ENV.fetch("REDIS_URL") { "redis://localhost:6379/1" } %>
+  channel_prefix: app_production

@@ -1,0 +1,27 @@
+# Local development image. Source is bind-mounted by docker-compose, so this
+# only needs to provide the Ruby runtime + build toolchain for native gems.
+ARG RUBY_VERSION=3.3.12
+FROM docker.io/library/ruby:${RUBY_VERSION}-slim
+
+WORKDIR /rails
+
+RUN apt-get update -qq && \
+    apt-get install --no-install-recommends -y \
+      build-essential \
+      default-libmysqlclient-dev \
+      default-mysql-client \
+      git \
+      libvips \
+      libyaml-dev \
+      nano \
+      pkg-config && \
+    rm -rf /var/lib/apt/lists /var/cache/apt/archives
+
+ENV BUNDLE_PATH="/usr/local/bundle"
+
+COPY Gemfile Gemfile.lock ./
+RUN bundle install
+
+EXPOSE 3000
+
+CMD ["bin/rails", "server", "-b", "0.0.0.0"]

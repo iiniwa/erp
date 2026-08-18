@@ -1,0 +1,11 @@
+# Local environment file (see docker/.env.example)
+/docker/.env
+
+# Rails master key / per-environment credential keys (defense in depth;
+# backend/.gitignore also excludes these from within backend/)
+/backend/config/master.key
+/backend/config/credentials/*.key
+
+# OS / editor cruft
+.DS_Store
+*.swp

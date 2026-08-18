@@ -1,0 +1,77 @@
+@import "tailwindcss";
+
+:root {
+  --background: #ffffff;
+  --foreground: #1f2937;
+
+  /* ベースカラー：シックなグレー系 */
+  --color-brand-gray-50: #f8fafc;
+  --color-brand-gray-100: #f1f5f9;
+  --color-brand-gray-200: #e2e8f0;
+  --color-brand-gray-300: #cbd5e1;
+  --color-brand-gray-400: #94a3b8;
+  --color-brand-gray-500: #64748b;
+  --color-brand-gray-600: #475569;
+  --color-brand-gray-700: #334155;
+  --color-brand-gray-800: #1e293b;
+  --color-brand-gray-900: #0f172a;
+
+  /* アクセントカラー：コーポレートロゴに合わせた緑系 */
+  --color-brand-green-50: #f0fdf4;
+  --color-brand-green-100: #dcfce7;
+  --color-brand-green-200: #bbf7d0;
+  --color-brand-green-300: #86efac;
+  --color-brand-green-400: #4ade80;
+  --color-brand-green-500: #22c55e;
+  --color-brand-green-600: #16a34a;
+  --color-brand-green-700: #15803d;
+  --color-brand-green-800: #166534;
+  --color-brand-green-900: #14532d;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+
+  --color-brand-gray-50: var(--color-brand-gray-50);
+  --color-brand-gray-100: var(--color-brand-gray-100);
+  --color-brand-gray-200: var(--color-brand-gray-200);
+  --color-brand-gray-300: var(--color-brand-gray-300);
+  --color-brand-gray-400: var(--color-brand-gray-400);
+  --color-brand-gray-500: var(--color-brand-gray-500);
+  --color-brand-gray-600: var(--color-brand-gray-600);
+  --color-brand-gray-700: var(--color-brand-gray-700);
+  --color-brand-gray-800: var(--color-brand-gray-800);
+  --color-brand-gray-900: var(--color-brand-gray-900);
+
+  --color-brand-green-50: var(--color-brand-green-50);
+  --color-brand-green-100: var(--color-brand-green-100);
+  --color-brand-green-200: var(--color-brand-green-200);
+  --color-brand-green-300: var(--color-brand-green-300);
+  --color-brand-green-400: var(--color-brand-green-400);
+  --color-brand-green-500: var(--color-brand-green-500);
+  --color-brand-green-600: var(--color-brand-green-600);
+  --color-brand-green-700: var(--color-brand-green-700);
+  --color-brand-green-800: var(--color-brand-green-800);
+  --color-brand-green-900: var(--color-brand-green-900);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0a0a0a;
+    --foreground: #ededed;
+  }
+}
+
+/* 11.2 高齢の従業員も利用するため基準フォントサイズを大きめに設定する */
+html {
+  font-size: 18px;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: Arial, Helvetica, sans-serif;
+}

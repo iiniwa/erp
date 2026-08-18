@@ -1,0 +1,76 @@
+# CodeRabbit configuration
+# https://docs.coderabbit.ai/reference/configuration
+
+language: "ja-JP"
+tone_instructions: >
+  レビューコメントは日本語で記述してください。
+  本文中のコマンド例・識別子・パス等は原文のまま（英語/コード）で構いません。
+
+early_access: false
+
+reviews:
+  profile: chill
+  request_changes_workflow: false
+  high_level_summary: true
+  poem: false
+  review_status: true
+  collapse_walkthrough: true
+  auto_review:
+    enabled: true
+    drafts: false
+    base_branches:
+      - "main"
+
+  path_filters:
+    - "!**/*.lock"
+    - "!**/package-lock.json"
+    - "!backend/vendor/**"
+    - "!backend/db/schema.rb"
+    - "!frontend/node_modules/**"
+    - "!frontend/.next/**"
+    - "!frontend/public/**/*.svg"
+    - "!**/*.ico"
+
+  path_instructions:
+    - path: "backend/**/*.rb"
+      instructions: >
+        Ruby on Rails（APIモード）のコード。rubocop-rails-omakaseの規約に従っているか、
+        Pundit（app/controllers/api/v1/base_controller.rb等）による認可が
+        必要な箇所で漏れていないかを重点的に確認してください。
+        DBスキーマ・マイグレーションはdocs/ERP_phase1_spec.mdのテーブル定義（5章・10章）
+        と整合しているか確認してください。
+
+    - path: "backend/spec/**/*.rb"
+      instructions: >
+        RSpec。認証・ロックアウト・論理削除・権限チェック（RBAC）等、
+        docs/ERP_phase1_spec.mdの12.4章で優先度が高いとされている領域を
+        中心にテストの網羅性を確認してください。
+
+    - path: "frontend/src/**/*.{ts,tsx}"
+      instructions: >
+        Next.js（App Router）+ TypeScript + Tailwind CSSのコード。
+        コンポーネントは機能単位（features/）で分割し、共通UIパーツは
+        components/ui/に配置する規約（docs/ERP_phase1_spec.md 12.3章）に
+        従っているか確認してください。フォームはreact-hook-form + zodの
+        組み合わせを基本とします。
+
+    - path: "docker/**"
+      instructions: >
+        Docker Compose定義。認証情報のデフォルト値がハードコードされて
+        いないか、公開ポートが意図せず0.0.0.0にバインドされていないかを
+        確認してください。
+
+    - path: "docs/ERP_phase1_spec.md"
+      instructions: >
+        本プロジェクトの正式な業務仕様書です。内容の技術的な矛盾（章同士の
+        不整合等）は指摘して構いませんが、業務要件そのものの妥当性判断は
+        避け、変更提案に留めてください。
+
+  abort_on_close: true
+
+chat:
+  auto_reply: true
+
+knowledge_base:
+  learnings:
+    scope: "auto"
