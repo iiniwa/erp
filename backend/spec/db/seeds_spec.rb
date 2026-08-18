@@ -41,9 +41,20 @@ RSpec.describe "db/seeds.rb" do
 
     expect(User.with_deleted.system_admin.count).to eq(1)
   ensure
-    AddressTel.delete_all
-    Address.delete_all
-    AddressCategory.delete_all
-    User.delete_all
+    # Delete only what this example itself created: the admin, its address
+    # and phone number, and the code_sequences rows their numbering
+    # consumed (including any burned by threads that lost the race and
+    # retried). The shared "社内" AddressCategory is left alone.
+    admin = User.system_admin.first
+    if admin
+      address = admin.addresses.first
+      if address
+        address.address_tels.delete_all
+        address.delete
+        CodeSequence.where(sequence_key: "8-#{Time.current.strftime('%y%m')}").delete_all
+      end
+      admin.delete
+      CodeSequence.where(sequence_key: "9-#{Time.current.strftime('%y%m')}").delete_all
+    end
   end
 end
