@@ -13,8 +13,9 @@ Rails.application.configure do
   # Encrypted attributes (e.g. User#user_auth_key) require real generated
   # keys in production. Run `bin/rails db:encryption:init` and store the
   # output under credentials `active_record_encryption:` before deploying.
-  ar_encryption_credentials = Rails.application.credentials.active_record_encryption
-  if ar_encryption_credentials.blank?
+  ar_encryption_credentials = Rails.application.credentials.active_record_encryption || {}
+  required_keys = %i[primary_key deterministic_key key_derivation_salt]
+  if required_keys.any? { |k| ar_encryption_credentials[k].blank? }
     raise "active_record_encryption credentials must be set in production " \
           "(run bin/rails db:encryption:init and add the output to credentials)"
   end

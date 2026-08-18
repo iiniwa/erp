@@ -9,6 +9,9 @@ class CreateCodeSequences < ActiveRecord::Migration[8.1]
       t.timestamps
     end
 
-    execute "ALTER TABLE code_sequences ADD PRIMARY KEY (sequence_key)"
+    reversible do |dir|
+      dir.up { execute "ALTER TABLE code_sequences ADD PRIMARY KEY (sequence_key)" }
+      dir.down { execute "ALTER TABLE code_sequences DROP PRIMARY KEY" }
+    end
   end
 end

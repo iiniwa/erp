@@ -14,6 +14,11 @@ class AddressTel < ApplicationRecord
 
   validates :at_number, presence: true
   validates :at_label_free, presence: true, if: :free?
+  # DB-level enforcement (the emergency_slot generated column + unique index
+  # in the address_tels migration) is what actually guarantees this under
+  # concurrent writes; this validation exists to surface a normal validation
+  # error instead of a raw ActiveRecord::RecordNotUnique in the common case.
+  validates :address_id, uniqueness: { scope: :at_label_type }, if: :emergency?
   validate :emergency_contact_requires_employee_address
 
   private

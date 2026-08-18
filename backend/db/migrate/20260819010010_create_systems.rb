@@ -1,9 +1,9 @@
 class CreateSystems < ActiveRecord::Migration[8.1]
   def change
     # id: false + a manually added (non-auto-incrementing) primary key: t.system
-    # is a singleton, always id=1 (see SystemSetting#force_singleton_id), and
-    # MariaDB rejects a CHECK constraint on an AUTO_INCREMENT column, which is
-    # what Rails' usual `primary_key:` shorthand would create here.
+    # is a singleton, always id=1 (see SystemSetting.instance), and MariaDB
+    # rejects a CHECK constraint on an AUTO_INCREMENT column, which is what
+    # Rails' usual `primary_key:` shorthand would create here.
     create_table :systems, id: false do |t|
       t.bigint :system_id, null: false
       t.string :system_name
@@ -39,7 +39,10 @@ class CreateSystems < ActiveRecord::Migration[8.1]
       t.check_constraint "system_id = 1", name: "systems_singleton_id"
     end
 
-    execute "ALTER TABLE systems ADD PRIMARY KEY (system_id)"
+    reversible do |dir|
+      dir.up { execute "ALTER TABLE systems ADD PRIMARY KEY (system_id)" }
+      dir.down { execute "ALTER TABLE systems DROP PRIMARY KEY" }
+    end
 
     add_foreign_key :systems, :users, column: :updated_by, primary_key: :user_code
   end

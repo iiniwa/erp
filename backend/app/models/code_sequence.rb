@@ -4,6 +4,13 @@
 class CodeSequence < ApplicationRecord
   self.primary_key = "sequence_key"
 
+  # docs/ERP_phase1_spec.md section 2: NNN is 3 digits, so a type/month
+  # bucket can issue at most 999 codes before the TTYYMMNNN format itself
+  # runs out of room.
+  MAX_NUMBER = 999
+
+  class Exhausted < StandardError; end
+
   validates :sequence_key, presence: true
 
   # Pessimistic locking (SELECT ... FOR UPDATE) rather than an atomic
@@ -15,6 +22,10 @@ class CodeSequence < ApplicationRecord
   def self.next_number_for(key)
     transaction do
       row = lock.find_by(sequence_key: key) || create!(sequence_key: key, last_number: 0)
+      if row.last_number >= MAX_NUMBER
+        raise Exhausted, "code sequence #{key} has reached its monthly limit of #{MAX_NUMBER}"
+      end
+
       row.increment!(:last_number)
       row.last_number
     end

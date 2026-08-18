@@ -11,7 +11,14 @@
 # editing this file; the defaults are placeholders to be corrected from the
 # admin screens after first login (see spec section 13.2).
 ActiveRecord::Base.transaction do
-  admin = User.find_or_initialize_by(user_type: :system_admin)
+  # .with_deleted: a soft-deleted admin must still be found here, otherwise
+  # a reseed would create a second :system_admin record alongside it.
+  admin = User.with_deleted.find_or_initialize_by(user_type: :system_admin)
+
+  if admin.persisted? && admin.soft_deleted?
+    raise "The fixed system administrator account has been soft-deleted; " \
+          "restore it manually (User#restore!) before reseeding"
+  end
 
   if admin.new_record?
     admin_birth = Date.parse(ENV.fetch("SEED_ADMIN_BIRTH", "1990-01-01"))

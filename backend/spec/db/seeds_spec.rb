@@ -18,4 +18,12 @@ RSpec.describe "db/seeds.rb" do
 
     expect { load Rails.root.join("db/seeds.rb") }.not_to change(User, :count)
   end
+
+  it "does not create a duplicate admin if the existing one was soft-deleted" do
+    load Rails.root.join("db/seeds.rb")
+    User.system_admin.sole.soft_delete!
+
+    expect { load Rails.root.join("db/seeds.rb") }.to raise_error(/soft-deleted/)
+    expect(User.with_deleted.system_admin.count).to eq(1)
+  end
 end
