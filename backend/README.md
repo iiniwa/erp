@@ -11,7 +11,7 @@ Ruby on Rails（APIモード）。詳細は[リポジトリルートのREADME](.
 # リポジトリルートで
 make setup
 make build dev
-docker compose -f docker/docker-compose.yml up backend
+docker compose -f docker-compose.yml up backend
 ```
 
 http://localhost:3001 で確認できる（ヘルスチェック: `/up`, `/api/v1/health`）。
@@ -36,5 +36,5 @@ make test           # RSpec実行（テストDBを使用）
 リポジトリルートから以下を実行する（詳しくは[ルートREADME](../README.md#railsの認証情報)を参照）。
 
 ```sh
-docker compose -f docker/docker-compose.yml run --rm -it -e EDITOR=nano backend bin/rails credentials:edit
+docker compose -f docker-compose.yml run --rm -it -e EDITOR=nano backend bin/rails credentials:edit
 ```

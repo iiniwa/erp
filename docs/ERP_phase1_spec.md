@@ -449,10 +449,12 @@ NN: 通し番号（2桁、月次リセット）
 
 ```
 /repo-root
- ├─ frontend/    Next.js（Tailwind CSS, PWA設定を含む）
- ├─ backend/     Ruby on Rails（API）
- ├─ docker/      Docker Compose定義、各種コンテナ設定
- └─ docs/        本仕様書含むドキュメント類
+ ├─ frontend/            Next.js（Tailwind CSS, PWA設定を含む）
+ ├─ backend/             Ruby on Rails（API）
+ ├─ docker/              MariaDB初期化スクリプト等
+ ├─ docker-compose.yml       開発環境（リポジトリルート直下、`docker compose up`用）
+ ├─ docker-compose.prod.yml  本番相当構成
+ └─ docs/                本仕様書含むドキュメント類
 ```
 
 ### 12.2 ローカル開発環境

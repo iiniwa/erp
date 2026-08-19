@@ -11,7 +11,7 @@ Next.js（App Router）+ Tailwind CSS。詳細は[リポジトリルートのREA
 # リポジトリルートで
 make setup
 make build dev
-docker compose -f docker/docker-compose.yml up frontend
+docker compose -f docker-compose.yml up frontend
 ```
 
 http://localhost:3000 で確認できる。`src/app/page.tsx` を編集すると自動でリロードされる。

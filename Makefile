@@ -1,31 +1,47 @@
 # 環境構築専用のMakefile。起動は `docker compose up` を直接使う。
-#   make build dev   開発環境イメージのビルド（docker/docker-compose.yml）
-#   make build prod  本番環境イメージのビルド（docker/docker-compose.prod.yml）
+#   make build dev   開発環境イメージのビルド（docker-compose.yml）
+#   make build prod  本番環境イメージのビルド（docker-compose.prod.yml）
 #
-# docker/.env をcompose fileと同じディレクトリに置いているため、
+# .env をcompose fileと同じディレクトリ（リポジトリルート）に置いているため、
 # `docker compose` 実行時に --env-file を指定する必要はない。
 #
 # 起動例:
-#   docker compose -f docker/docker-compose.yml up       (dev)
-#   docker compose -f docker/docker-compose.prod.yml up  (prod)
+#   docker compose -f docker-compose.yml up       (dev)
+#   docker compose -f docker-compose.prod.yml up  (prod)
 
-COMPOSE_DEV = docker compose -f docker/docker-compose.yml
-COMPOSE_PROD = docker compose -f docker/docker-compose.prod.yml
+COMPOSE_DEV = docker compose -f docker-compose.yml
+COMPOSE_PROD = docker compose -f docker-compose.prod.yml
 
-.PHONY: setup build dev prod lint
+.PHONY: setup _generate-env build dev prod lint
 
-setup: ## docker/.env作成（初回のみ。パスワード/シークレット類はランダム生成する）
-	@if [ -f docker/.env ]; then \
-		echo "docker/.env は既に存在するため作成をスキップします"; \
+setup: ## .env作成（初回のみ。旧docker/.envからの移行にも対応）
+	@if [ -f .env ]; then \
+		echo ".env は既に存在するため作成をスキップします"; \
+	elif [ -f docker/.env ]; then \
+		mv docker/.env .env && echo "docker/.env を .env に移行しました"; \
 	else \
-		cp docker/.env.example docker/.env; \
-		sed -i.bak "s/^DB_ROOT_PASSWORD=.*/DB_ROOT_PASSWORD=$$(openssl rand -hex 24)/" docker/.env; \
-		sed -i.bak "s/^DB_PASSWORD=.*/DB_PASSWORD=$$(openssl rand -hex 24)/" docker/.env; \
-		sed -i.bak "s/^INTERNAL_API_SECRET=.*/INTERNAL_API_SECRET=$$(openssl rand -hex 32)/" docker/.env; \
-		sed -i.bak "s/^SFTPGO_ADMIN_PASSWORD=.*/SFTPGO_ADMIN_PASSWORD=$$(openssl rand -hex 16)/" docker/.env; \
-		rm -f docker/.env.bak; \
-		echo "docker/.env を作成しました（DB/内部API/SFTPGo管理者パスワードはランダム生成済み）"; \
+		$(MAKE) _generate-env; \
 	fi
+
+_generate-env: ## パスワード/シークレット類をランダム生成した.envを新規作成
+	@db_root_password="$$(openssl rand -hex 24)"; rc=$$?; \
+	db_password="$$(openssl rand -hex 24)"; rc=$$((rc + $$?)); \
+	internal_api_secret="$$(openssl rand -hex 32)"; rc=$$((rc + $$?)); \
+	sftpgo_admin_password="$$(openssl rand -hex 16)"; rc=$$((rc + $$?)); \
+	if [ "$$rc" -ne 0 ] || [ -z "$$db_root_password" ] || [ -z "$$db_password" ] || \
+	   [ -z "$$internal_api_secret" ] || [ -z "$$sftpgo_admin_password" ]; then \
+		echo "シークレットの生成に失敗しました（opensslを確認してください）" >&2; \
+		exit 1; \
+	fi; \
+	env_tmp="$$(mktemp .env.tmp.XXXXXX)" && \
+	trap 'rm -f "$$env_tmp" "$$env_tmp.bak"' 0 1 2 3 15 && \
+	cp .env.example "$$env_tmp" && \
+	sed -i.bak "s/^DB_ROOT_PASSWORD=.*/DB_ROOT_PASSWORD=$$db_root_password/" "$$env_tmp" && \
+	sed -i.bak "s/^DB_PASSWORD=.*/DB_PASSWORD=$$db_password/" "$$env_tmp" && \
+	sed -i.bak "s/^INTERNAL_API_SECRET=.*/INTERNAL_API_SECRET=$$internal_api_secret/" "$$env_tmp" && \
+	sed -i.bak "s/^SFTPGO_ADMIN_PASSWORD=.*/SFTPGO_ADMIN_PASSWORD=$$sftpgo_admin_password/" "$$env_tmp" && \
+	mv "$$env_tmp" .env && \
+	echo ".env を作成しました（DB/内部API/SFTPGo管理者パスワードはランダム生成済み）"
 
 build: ## `make build dev` または `make build prod` でイメージをビルド
 ifneq (,$(filter dev,$(MAKECMDGOALS)))
