@@ -71,4 +71,8 @@ Rails.application.configure do
   config.active_record.encryption.primary_key = "insecure_test_primary_key_do_not_use_in_prod"
   config.active_record.encryption.deterministic_key = "insecure_test_deterministic_key_do_not_use"
   config.active_record.encryption.key_derivation_salt = "insecure_test_key_derivation_salt_do_not_use"
+
+  # Api::V1::BaseController#authenticate_internal_request! requires this to
+  # be set; request specs send it back as X-Internal-Api-Secret.
+  ENV["INTERNAL_API_SECRET"] ||= "insecure_test_internal_api_secret_do_not_use"
 end

@@ -73,4 +73,57 @@ RSpec.describe User do
       expect(duplicate).not_to be_valid
     end
   end
+
+  describe "lockout" do
+    it "locks the account once user_login_fail_count reaches login_lockout_count" do
+      user = create(:user)
+      SystemSetting.instance.update!(login_lockout_count: 2)
+
+      user.register_failed_login!
+      expect(user.user_is_locked).to be false
+
+      user.register_failed_login!
+      expect(user.user_is_locked).to be true
+    end
+
+    it "resets the counter on a successful login" do
+      user = create(:user, user_login_fail_count: 3)
+
+      user.register_successful_login!
+
+      expect(user.user_login_fail_count).to eq(0)
+    end
+
+    it "unlocks the account and resets the counter" do
+      user = create(:user, user_is_locked: true, user_login_fail_count: 10)
+
+      user.unlock_account!
+
+      expect(user.user_is_locked).to be false
+      expect(user.user_login_fail_count).to eq(0)
+    end
+  end
+
+  describe ".authenticate_by_auth_key" do
+    it "finds the user with a matching auth key" do
+      user = create(:user, user_auth_key: "badge-123")
+
+      expect(described_class.authenticate_by_auth_key("badge-123")).to eq(user)
+    end
+
+    it "returns nil for a non-matching key" do
+      create(:user, user_auth_key: "badge-123")
+
+      expect(described_class.authenticate_by_auth_key("badge-999")).to be_nil
+    end
+
+    it "stores the auth key encrypted, not in plaintext" do
+      user = create(:user, user_auth_key: "badge-123")
+
+      raw_column_value = described_class.connection.select_value(
+        "SELECT user_auth_key FROM users WHERE user_code = #{described_class.connection.quote(user.user_code)}"
+      )
+      expect(raw_column_value).not_to eq("badge-123")
+    end
+  end
 end
