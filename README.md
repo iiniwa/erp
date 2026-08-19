@@ -7,10 +7,12 @@
 
 ```
 /repo-root
- ├─ frontend/    Next.js（Tailwind CSS, PWA対応）
- ├─ backend/     Ruby on Rails（APIモード）
- ├─ docker/      Docker Compose定義
- └─ docs/        ドキュメント
+ ├─ frontend/                Next.js（Tailwind CSS, PWA対応）
+ ├─ backend/                 Ruby on Rails（APIモード）
+ ├─ docker/                  MariaDB初期化スクリプト等
+ ├─ docker-compose.yml       開発環境
+ ├─ docker-compose.prod.yml  本番相当構成
+ └─ docs/                    ドキュメント
 ```
 
 - フロントエンド: Next.js + Tailwind CSS

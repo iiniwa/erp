@@ -451,7 +451,7 @@ NN: 通し番号（2桁、月次リセット）
 /repo-root
  ├─ frontend/            Next.js（Tailwind CSS, PWA設定を含む）
  ├─ backend/             Ruby on Rails（API）
- ├─ docker/              MariaDB初期化スクリプト等、各種コンテナ設定
+ ├─ docker/              MariaDB初期化スクリプト等
  ├─ docker-compose.yml       開発環境（リポジトリルート直下、`docker compose up`用）
  ├─ docker-compose.prod.yml  本番相当構成
  └─ docs/                本仕様書含むドキュメント類

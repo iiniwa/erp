@@ -1,6 +1,11 @@
 # Local environment file (see .env.example)
 /.env
 
+# Old location, kept ignored during the migration period so `make setup`
+# can still find and move it (see Makefile) on checkouts that predate the
+# docker-compose.yml relocation to the repo root.
+/docker/.env
+
 # Rails master key / per-environment credential keys (defense in depth;
 # backend/.gitignore also excludes these from within backend/)
 /backend/config/master.key
