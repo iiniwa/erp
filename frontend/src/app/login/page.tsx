@@ -30,20 +30,24 @@ export default function LoginPage() {
   } = useForm<LoginFormValues>({ resolver: zodResolver(loginSchema) });
 
   async function onSubmit(values: LoginFormValues) {
-    const response = await fetch("/api/auth/login", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(values),
-    });
+    try {
+      const response = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(values),
+      });
 
-    if (!response.ok) {
-      const body = await response.json().catch(() => ({}));
-      showToast(errorMessage(body.error), "error");
-      return;
+      if (!response.ok) {
+        const body = await response.json().catch(() => ({}));
+        showToast(errorMessage(body.error), "error");
+        return;
+      }
+
+      router.push("/");
+      router.refresh();
+    } catch {
+      showToast("通信に失敗しました。ネットワーク接続を確認してください。", "error");
     }
-
-    router.push("/");
-    router.refresh();
   }
 
   return (

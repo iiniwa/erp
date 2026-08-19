@@ -1,19 +1,36 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import Modal from "@/components/ui/Modal";
+import { useToast } from "@/components/ui/ToastProvider";
 import type { CurrentUser } from "@/lib/session";
 
 export default function Header({ user }: { user: CurrentUser }) {
   const router = useRouter();
+  const { showToast } = useToast();
   const [confirmingLogout, setConfirmingLogout] = useState(false);
 
+  // Stable identity: Modal's focus-trap effect depends on this, and an
+  // inline arrow function here would give it a new identity on every
+  // Header re-render, re-triggering the effect and stealing focus back.
+  const closeLogoutModal = useCallback(() => setConfirmingLogout(false), []);
+
   async function handleLogout() {
-    await fetch("/api/auth/logout", { method: "POST" });
-    router.push("/login");
-    router.refresh();
+    try {
+      const response = await fetch("/api/auth/logout", { method: "POST" });
+      if (!response.ok) {
+        showToast("ログアウトに失敗しました。時間をおいて再度お試しください。", "error");
+        return;
+      }
+      router.push("/login");
+      router.refresh();
+    } catch {
+      showToast("通信に失敗しました。ネットワーク接続を確認してください。", "error");
+    } finally {
+      setConfirmingLogout(false);
+    }
   }
 
   return (
@@ -39,7 +56,7 @@ export default function Header({ user }: { user: CurrentUser }) {
         open={confirmingLogout}
         title="ログアウトの確認"
         onConfirm={handleLogout}
-        onCancel={() => setConfirmingLogout(false)}
+        onCancel={closeLogoutModal}
         confirmLabel="ログアウト"
       >
         ログアウトしてもよろしいですか？

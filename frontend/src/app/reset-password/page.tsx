@@ -19,20 +19,24 @@ export default function ResetPasswordPage() {
   } = useForm<PasswordFormValues>({ resolver: zodResolver(passwordSchema) });
 
   async function onSubmit(values: PasswordFormValues) {
-    const response = await fetch("/api/auth/password", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ password: values.password }),
-    });
+    try {
+      const response = await fetch("/api/auth/password", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password: values.password }),
+      });
 
-    if (!response.ok) {
-      showToast("パスワードの変更に失敗しました。時間をおいて再度お試しください。", "error");
-      return;
+      if (!response.ok) {
+        showToast("パスワードの変更に失敗しました。時間をおいて再度お試しください。", "error");
+        return;
+      }
+
+      showToast("パスワードを変更しました。");
+      router.push("/");
+      router.refresh();
+    } catch {
+      showToast("通信に失敗しました。ネットワーク接続を確認してください。", "error");
     }
-
-    showToast("パスワードを変更しました。");
-    router.push("/");
-    router.refresh();
   }
 
   return (
