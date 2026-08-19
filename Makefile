@@ -24,22 +24,23 @@ setup: ## .env作成（初回のみ。旧docker/.envからの移行にも対応�
 	fi
 
 _generate-env: ## パスワード/シークレット類をランダム生成した.envを新規作成
-	@db_root_password="$$(openssl rand -hex 24)" && \
-	db_password="$$(openssl rand -hex 24)" && \
-	internal_api_secret="$$(openssl rand -hex 32)" && \
-	sftpgo_admin_password="$$(openssl rand -hex 16)" && \
-	if [ -z "$$db_root_password" ] || [ -z "$$db_password" ] || \
+	@db_root_password="$$(openssl rand -hex 24)"; rc=$$?; \
+	db_password="$$(openssl rand -hex 24)"; rc=$$((rc + $$?)); \
+	internal_api_secret="$$(openssl rand -hex 32)"; rc=$$((rc + $$?)); \
+	sftpgo_admin_password="$$(openssl rand -hex 16)"; rc=$$((rc + $$?)); \
+	if [ "$$rc" -ne 0 ] || [ -z "$$db_root_password" ] || [ -z "$$db_password" ] || \
 	   [ -z "$$internal_api_secret" ] || [ -z "$$sftpgo_admin_password" ]; then \
 		echo "シークレットの生成に失敗しました（opensslを確認してください）" >&2; \
 		exit 1; \
-	fi && \
-	cp .env.example .env.tmp && \
-	sed -i.bak "s/^DB_ROOT_PASSWORD=.*/DB_ROOT_PASSWORD=$$db_root_password/" .env.tmp && \
-	sed -i.bak "s/^DB_PASSWORD=.*/DB_PASSWORD=$$db_password/" .env.tmp && \
-	sed -i.bak "s/^INTERNAL_API_SECRET=.*/INTERNAL_API_SECRET=$$internal_api_secret/" .env.tmp && \
-	sed -i.bak "s/^SFTPGO_ADMIN_PASSWORD=.*/SFTPGO_ADMIN_PASSWORD=$$sftpgo_admin_password/" .env.tmp && \
-	rm -f .env.tmp.bak && \
-	mv .env.tmp .env && \
+	fi; \
+	env_tmp="$$(mktemp .env.tmp.XXXXXX)" && \
+	trap 'rm -f "$$env_tmp" "$$env_tmp.bak"' 0 1 2 3 15 && \
+	cp .env.example "$$env_tmp" && \
+	sed -i.bak "s/^DB_ROOT_PASSWORD=.*/DB_ROOT_PASSWORD=$$db_root_password/" "$$env_tmp" && \
+	sed -i.bak "s/^DB_PASSWORD=.*/DB_PASSWORD=$$db_password/" "$$env_tmp" && \
+	sed -i.bak "s/^INTERNAL_API_SECRET=.*/INTERNAL_API_SECRET=$$internal_api_secret/" "$$env_tmp" && \
+	sed -i.bak "s/^SFTPGO_ADMIN_PASSWORD=.*/SFTPGO_ADMIN_PASSWORD=$$sftpgo_admin_password/" "$$env_tmp" && \
+	mv "$$env_tmp" .env && \
 	echo ".env を作成しました（DB/内部API/SFTPGo管理者パスワードはランダム生成済み）"
 
 build: ## `make build dev` または `make build prod` でイメージをビルド
