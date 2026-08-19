@@ -7,10 +7,12 @@
 
 ```
 /repo-root
- ├─ frontend/    Next.js（Tailwind CSS, PWA対応）
- ├─ backend/     Ruby on Rails（APIモード）
- ├─ docker/      Docker Compose定義
- └─ docs/        ドキュメント
+ ├─ frontend/                Next.js（Tailwind CSS, PWA対応）
+ ├─ backend/                 Ruby on Rails（APIモード）
+ ├─ docker/                  MariaDB初期化スクリプト等
+ ├─ docker-compose.yml       開発環境
+ ├─ docker-compose.prod.yml  本番相当構成
+ └─ docs/                    ドキュメント
 ```
 
 - フロントエンド: Next.js + Tailwind CSS
@@ -23,25 +25,25 @@
 必要なもの: Docker / Docker Compose
 
 Makefileは**環境構築（イメージのビルド）専任**。起動・停止は `docker compose`
-を直接使う。`docker/.env` はcompose fileと同じディレクトリに置いており、
+を直接使う。`.env` はcompose fileと同じディレクトリに置いており、
 Composeが自動で読み込むため `docker compose` 実行時に `--env-file` の指定は不要。
 
 ```sh
 git clone <このリポジトリ>
 cd erp
-make setup        # docker/.env を作成（DB/内部API/SFTPGo管理者パスワードはランダム生成）
+make setup        # .env を作成（DB/内部API/SFTPGo管理者パスワードはランダム生成）
 make build dev    # 開発環境イメージをビルド
 ```
 
 開発用のポート（DB/backend/frontend/SFTPGo）はデフォルトで`127.0.0.1`にのみ
-バインドされる（`docker/.env`の`BIND_ADDRESS`で変更可能）。
+バインドされる（`.env`の`BIND_ADDRESS`で変更可能）。
 
-`docker/.env` の `RAILS_MASTER_KEY` は各自ローカルで発行する（詳しくは
+`.env` の `RAILS_MASTER_KEY` は各自ローカルで発行する（詳しくは
 [Railsの認証情報](#railsの認証情報) を参照）。値が空でも開発環境では動作するが、
 本番環境（`docker-compose.prod.yml`）では必須。
 
 ```sh
-docker compose -f docker/docker-compose.yml up
+docker compose -f docker-compose.yml up
 ```
 
 - フロントエンド: http://localhost:3000
@@ -52,7 +54,7 @@ docker compose -f docker/docker-compose.yml up
 
 ```sh
 make build prod
-docker compose -f docker/docker-compose.prod.yml up
+docker compose -f docker-compose.prod.yml up
 ```
 
 ## よく使うコマンド
@@ -60,7 +62,7 @@ docker compose -f docker/docker-compose.prod.yml up
 ルート直下:
 
 ```sh
-make setup       # docker/.env作成
+make setup       # .env作成
 make build dev    # 開発環境イメージのビルド
 make build prod   # 本番環境イメージのビルド
 make lint         # frontend/backend双方のLintを実行
@@ -99,7 +101,7 @@ make test          # RSpec実行
 Ruby/Bundlerは不要）。
 
 ```sh
-docker compose -f docker/docker-compose.yml run --rm -it -e EDITOR=nano backend bin/rails credentials:edit
+docker compose -f docker-compose.yml run --rm -it -e EDITOR=nano backend bin/rails credentials:edit
 ```
 
 チームで鍵を共有する場合は、`config/master.key` の内容をパスワードマネージャー等

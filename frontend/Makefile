@@ -2,8 +2,8 @@
 #   make build dev   開発イメージのビルド
 #   make build prod  本番イメージのビルド
 
-COMPOSE_DEV = docker compose -f ../docker/docker-compose.yml
-COMPOSE_PROD = docker compose -f ../docker/docker-compose.prod.yml
+COMPOSE_DEV = docker compose -f ../docker-compose.yml
+COMPOSE_PROD = docker compose -f ../docker-compose.prod.yml
 RUN_DEV = $(COMPOSE_DEV) run --rm frontend
 
 .PHONY: setup build dev prod lint test
