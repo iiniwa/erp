@@ -20,7 +20,9 @@
 - **DB**: MariaDB
 - **ファイルストレージ**: SFTPGo（詳細は「9. ファイルストレージ構成」参照）
 - **認証方式**: 分離型
-  - Next.js（NextAuth）が認証・セッション管理を担当
+  - Next.js API Route（BFF層）が認証・セッション管理を担当。NextAuthのCredentials
+    Providerはデータベースセッション方式（JWT不使用）と併用できない制約があるため、
+    NextAuthは使わずhttpOnly Cookie + Rails側`t.sessions`による自前実装とする
   - Next.js側API Route（BFF層）がセッション検証後、内部シークレット/署名付きトークンでバックエンドAPIへリクエストを中継
   - バックエンドAPI側でも権限チェックを必須実装（多重防御。将来の外部公開を見据える）
 - **インフラ**: Proxmox上のDockerコンテナ、Cloudflare Tunnel経由で公開、Valuedomain管理ドメインのサブドメイン使用
@@ -105,7 +107,9 @@ NN: 通し番号（2桁、月次リセット）
 
 ### 3.5 セッション管理
 - **DBセッション方式**を採用（JWTは使用しない）
-- NextAuthのAdapter機能（Prisma Adapter等）を利用し、`t.sessions`相当のテーブルで管理
+- NextAuthのCredentials ProviderはDBセッション方式と併用できないため、NextAuthは使用せず、
+  Rails `t.sessions`を正とする自前実装とする。Next.js側は不透明なセッショントークンを
+  httpOnly Cookieに保持し、リクエストごとにRails API（内部シークレット付き）で検証する
 - セッションには`session_mode`（通常/QR限定）を保持し、認可判定に利用
 
 ---

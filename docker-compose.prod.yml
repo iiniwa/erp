@@ -49,7 +49,6 @@ services:
     restart: unless-stopped
     environment:
       NODE_ENV: production
-      NEXTAUTH_URL: ${NEXTAUTH_URL:?NEXTAUTH_URL is required}
       BACKEND_INTERNAL_URL: http://backend:3000
       INTERNAL_API_SECRET: ${INTERNAL_API_SECRET:?INTERNAL_API_SECRET is required}
     ports:

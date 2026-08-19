@@ -4,7 +4,11 @@ class User < ApplicationRecord
 
   self.primary_key = "user_code"
 
-  encrypts :user_auth_key
+  # deterministic: true so User.authenticate_by_auth_key can look a scanned
+  # QR key up with a plain WHERE equality; Rails' encryption is
+  # non-deterministic (random IV per write) by default, which would make
+  # that kind of exact-match lookup impossible.
+  encrypts :user_auth_key, deterministic: true
 
   enum :user_type, {
     system_admin: 1,
@@ -39,6 +43,32 @@ class User < ApplicationRecord
     return false if user_is_locked?
 
     BCrypt::Password.new(user_pass) == raw_password
+  end
+
+  # QR and password login share this counter (spec section 3.3).
+  def register_failed_login!
+    increment!(:user_login_fail_count)
+    lock_account! if user_login_fail_count >= SystemSetting.instance.login_lockout_count
+  end
+
+  def register_successful_login!
+    update!(user_login_fail_count: 0) if user_login_fail_count.positive?
+  end
+
+  def lock_account!
+    update!(user_is_locked: true)
+  end
+
+  # Manual admin action only (spec section 3.3): there is no automatic
+  # time-based unlock.
+  def unlock_account!
+    update!(user_is_locked: false, user_login_fail_count: 0)
+  end
+
+  def self.authenticate_by_auth_key(auth_key)
+    return nil if auth_key.blank?
+
+    find_by(user_auth_key: auth_key)
   end
 
   private
