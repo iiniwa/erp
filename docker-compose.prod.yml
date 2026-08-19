@@ -11,7 +11,7 @@ services:
       MARIADB_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD is required}
     volumes:
       - db_data:/var/lib/mysql
-      - ./mariadb/init:/docker-entrypoint-initdb.d:ro
+      - ./docker/mariadb/init:/docker-entrypoint-initdb.d:ro
     healthcheck:
       test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
       interval: 5s
@@ -20,7 +20,7 @@ services:
 
   backend:
     build:
-      context: ../backend
+      context: backend
       dockerfile: Dockerfile
     restart: unless-stopped
     environment:
@@ -35,7 +35,7 @@ services:
       RAILS_MASTER_KEY: ${RAILS_MASTER_KEY:?RAILS_MASTER_KEY is required}
       # No Redis service is provisioned by this Compose stack; point this at
       # an externally managed Redis instance (required for Action Cable).
-      REDIS_URL: ${REDIS_URL:?REDIS_URL is required (see docker/docker-compose.prod.yml)}
+      REDIS_URL: ${REDIS_URL:?REDIS_URL is required (see docker-compose.prod.yml)}
     ports:
       - "${BIND_ADDRESS:-127.0.0.1}:${BACKEND_PORT:-3001}:3000"
     depends_on:
@@ -44,7 +44,7 @@ services:
 
   frontend:
     build:
-      context: ../frontend
+      context: frontend
       dockerfile: Dockerfile
     restart: unless-stopped
     environment:
