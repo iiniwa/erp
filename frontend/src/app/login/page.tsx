@@ -52,7 +52,10 @@ export default function LoginPage() {
         <h1 className="mb-6 text-center text-2xl font-semibold text-brand-gray-900">ログイン</h1>
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <div>
-            <label htmlFor="identifier" className="mb-1 block text-sm font-medium text-brand-gray-700">
+            <label
+              htmlFor="identifier"
+              className="mb-1 block text-sm font-medium text-brand-gray-700"
+            >
               ログインID または 電話番号
             </label>
             <input
@@ -67,7 +70,10 @@ export default function LoginPage() {
             />
           </div>
           <div>
-            <label htmlFor="password" className="mb-1 block text-sm font-medium text-brand-gray-700">
+            <label
+              htmlFor="password"
+              className="mb-1 block text-sm font-medium text-brand-gray-700"
+            >
               パスワード
             </label>
             <input

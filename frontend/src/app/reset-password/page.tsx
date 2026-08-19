@@ -54,7 +54,10 @@ export default function ResetPasswordPage() {
         </p>
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <div>
-            <label htmlFor="password" className="mb-1 block text-sm font-medium text-brand-gray-700">
+            <label
+              htmlFor="password"
+              className="mb-1 block text-sm font-medium text-brand-gray-700"
+            >
               新しいパスワード（4文字以上）
             </label>
             <input
