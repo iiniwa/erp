@@ -1,0 +1,17 @@
+{
+  "name": "ERPシステム",
+  "short_name": "ERP",
+  "description": "従業員管理・アドレス帳・勤怠管理を統合するERPシステム",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f8fafc",
+  "theme_color": "#16a34a",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}
