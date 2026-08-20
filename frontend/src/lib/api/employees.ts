@@ -30,12 +30,21 @@ export async function fetchEmployees(): Promise<Employee[]> {
   return body.users;
 }
 
+// Only a real 404 means "no such employee" (-> caller should call
+// notFound()). Any other failure (expired session, backend error) throws
+// instead, so it surfaces as a proper error rather than a misleading 404.
 export async function fetchEmployee(userCode: string): Promise<Employee | null> {
   const token = await getSessionToken();
   if (!token) return null;
 
-  const response = await backendFetch(`/api/v1/users/${userCode}`, { sessionToken: token });
-  if (!response.ok) return null;
+  const response = await backendFetch(`/api/v1/users/${encodeURIComponent(userCode)}`, {
+    sessionToken: token,
+  });
+
+  if (response.status === 404) return null;
+  if (!response.ok) {
+    throw new Error(`Failed to fetch employee ${userCode} (status ${response.status})`);
+  }
 
   const body = (await response.json()) as { user: Employee };
   return body.user;

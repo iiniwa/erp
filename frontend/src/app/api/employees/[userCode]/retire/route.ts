@@ -11,7 +11,7 @@ export async function POST(_request: Request, { params }: RouteParams) {
   }
 
   const { userCode } = await params;
-  const response = await backendFetch(`/api/v1/users/${userCode}/retire`, {
+  const response = await backendFetch(`/api/v1/users/${encodeURIComponent(userCode)}/retire`, {
     method: "POST",
     sessionToken: token,
   });

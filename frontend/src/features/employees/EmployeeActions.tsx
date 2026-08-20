@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Button from "@/components/ui/Button";
 import Modal from "@/components/ui/Modal";
@@ -17,6 +17,9 @@ export default function EmployeeActions({
   const { showToast } = useToast();
   const [confirmingRetire, setConfirmingRetire] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
+  // Guards against a rapid double-click on the modal's confirm button
+  // sending the same destructive request twice.
+  const mutationInFlight = useRef(false);
 
   // Stable identities so Modal's focus-trap effect doesn't re-fire on
   // unrelated re-renders (see Header.tsx for the same fix).
@@ -24,8 +27,14 @@ export default function EmployeeActions({
   const closeDeleteModal = useCallback(() => setConfirmingDelete(false), []);
 
   async function handleRetire() {
+    if (mutationInFlight.current) return;
+    mutationInFlight.current = true;
+
     try {
-      const response = await fetch(`/api/employees/${userCode}/retire`, { method: "POST" });
+      const encodedUserCode = encodeURIComponent(userCode);
+      const response = await fetch(`/api/employees/${encodedUserCode}/retire`, {
+        method: "POST",
+      });
       if (!response.ok) {
         showToast("退職処理に失敗しました。", "error");
         return;
@@ -35,13 +44,19 @@ export default function EmployeeActions({
     } catch {
       showToast("通信に失敗しました。ネットワーク接続を確認してください。", "error");
     } finally {
+      mutationInFlight.current = false;
       setConfirmingRetire(false);
     }
   }
 
   async function handleDelete() {
+    if (mutationInFlight.current) return;
+    mutationInFlight.current = true;
+
     try {
-      const response = await fetch(`/api/employees/${userCode}`, { method: "DELETE" });
+      const response = await fetch(`/api/employees/${encodeURIComponent(userCode)}`, {
+        method: "DELETE",
+      });
       if (!response.ok) {
         showToast("削除に失敗しました。", "error");
         return;
@@ -52,6 +67,7 @@ export default function EmployeeActions({
     } catch {
       showToast("通信に失敗しました。ネットワーク接続を確認してください。", "error");
     } finally {
+      mutationInFlight.current = false;
       setConfirmingDelete(false);
     }
   }
