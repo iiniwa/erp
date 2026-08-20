@@ -16,6 +16,12 @@ Rails.application.routes.draw do
       end
 
       resource :me, only: %i[show], controller: "me"
+
+      resources :users, only: %i[index show create update destroy], param: :user_code do
+        member do
+          post :retire
+        end
+      end
     end
   end
 end

@@ -26,6 +26,7 @@ class User < ApplicationRecord
   validates :user_familyname, :user_firstname, :user_familyname_ruby, :user_firstname_ruby, presence: true
   validates :user_pass, presence: true
 
+  before_validation :normalize_user_id
   before_create :assign_user_code
   before_create :assign_user_entry_date
   before_save :touch_user_update_date
@@ -72,6 +73,15 @@ class User < ApplicationRecord
   end
 
   private
+
+  # Blank strings (e.g. an unfilled form field submitted as "") must not
+  # reach the uniqueness validation as-is: unlike nil, "" is a normal
+  # value, so two employees with no user_id set would otherwise collide
+  # on "" instead of both being allowed (validates ... allow_nil: true
+  # only exempts actual nil).
+  def normalize_user_id
+    self.user_id = nil if user_id.blank?
+  end
 
   def assign_user_code
     self.user_code ||= self.class.generate_code(type_code: "9")

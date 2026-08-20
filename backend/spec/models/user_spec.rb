@@ -72,6 +72,14 @@ RSpec.describe User do
 
       expect(duplicate).not_to be_valid
     end
+
+    it "allows multiple users with a blank string user_id (normalized to NULL)" do
+      create(:user, user_id: "")
+      second = build(:user, user_id: "")
+
+      expect(second).to be_valid
+      expect(second.user_id).to be_nil
+    end
   end
 
   describe "lockout" do
