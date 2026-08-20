@@ -1,7 +1,13 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { loginSchema, type LoginFormValues } from "@/lib/validation/auth";
+import { useToast } from "@/components/ui/ToastProvider";
+import Button from "@/components/ui/Button";
+import Input from "@/components/ui/Input";
+import Card from "@/components/ui/Card";
 
 function errorMessage(code: string | undefined): string {
   switch (code) {
@@ -16,91 +22,59 @@ function errorMessage(code: string | undefined): string {
 
 export default function LoginPage() {
   const router = useRouter();
-  const [identifier, setIdentifier] = useState("");
-  const [password, setPassword] = useState("");
-  const [error, setError] = useState<string | null>(null);
-  const [submitting, setSubmitting] = useState(false);
+  const { showToast } = useToast();
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+  } = useForm<LoginFormValues>({ resolver: zodResolver(loginSchema) });
 
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setError(null);
-    setSubmitting(true);
-
+  async function onSubmit(values: LoginFormValues) {
     try {
       const response = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ identifier, password }),
+        body: JSON.stringify(values),
       });
 
       if (!response.ok) {
         const body = await response.json().catch(() => ({}));
-        setError(errorMessage(body.error));
+        showToast(errorMessage(body.error), "error");
         return;
       }
 
       router.push("/");
       router.refresh();
-    } finally {
-      setSubmitting(false);
+    } catch {
+      showToast("通信に失敗しました。ネットワーク接続を確認してください。", "error");
     }
   }
 
   return (
     <div className="flex flex-1 items-center justify-center px-4 py-16">
-      <div className="w-full max-w-sm rounded-lg border border-brand-gray-200 bg-white p-8 shadow-sm">
+      <Card className="w-full max-w-sm">
         <h1 className="mb-6 text-center text-2xl font-semibold text-brand-gray-900">ログイン</h1>
-        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-          <div>
-            <label
-              htmlFor="identifier"
-              className="mb-1 block text-sm font-medium text-brand-gray-700"
-            >
-              ログインID または 電話番号
-            </label>
-            <input
-              id="identifier"
-              name="identifier"
-              type="text"
-              autoComplete="username"
-              required
-              value={identifier}
-              onChange={(event) => setIdentifier(event.target.value)}
-              className="w-full rounded-md border border-brand-gray-300 px-3 py-2 focus:border-brand-green-500 focus:outline-none focus:ring-1 focus:ring-brand-green-500"
-            />
-          </div>
-          <div>
-            <label
-              htmlFor="password"
-              className="mb-1 block text-sm font-medium text-brand-gray-700"
-            >
-              パスワード
-            </label>
-            <input
-              id="password"
-              name="password"
-              type="password"
-              autoComplete="current-password"
-              required
-              value={password}
-              onChange={(event) => setPassword(event.target.value)}
-              className="w-full rounded-md border border-brand-gray-300 px-3 py-2 focus:border-brand-green-500 focus:outline-none focus:ring-1 focus:ring-brand-green-500"
-            />
-          </div>
-          {error && (
-            <p role="alert" className="text-sm text-red-600">
-              {error}
-            </p>
-          )}
-          <button
-            type="submit"
-            disabled={submitting}
-            className="mt-2 rounded-md bg-brand-green-600 px-4 py-2 font-medium text-white transition-colors hover:bg-brand-green-700 disabled:opacity-50"
-          >
-            {submitting ? "ログイン中..." : "ログイン"}
-          </button>
+        <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
+          <Input
+            id="identifier"
+            label="ログインID または 電話番号"
+            autoComplete="username"
+            error={errors.identifier?.message}
+            {...register("identifier")}
+          />
+          <Input
+            id="password"
+            type="password"
+            label="パスワード"
+            autoComplete="current-password"
+            error={errors.password?.message}
+            {...register("password")}
+          />
+          <Button type="submit" disabled={isSubmitting} className="mt-2">
+            {isSubmitting ? "ログイン中..." : "ログイン"}
+          </Button>
         </form>
-      </div>
+      </Card>
     </div>
   );
 }
