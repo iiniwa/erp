@@ -31,7 +31,7 @@ services:
       DB_PORT: 3306
       DB_USERNAME: "${DB_USERNAME:-app}"
       DB_PASSWORD: "${DB_PASSWORD:?Set DB_PASSWORD in .env (run: make setup)}"
-      FRONTEND_ORIGIN: http://localhost:3000
+      FRONTEND_ORIGIN: "http://localhost:${FRONTEND_PORT:-3000}"
       INTERNAL_API_SECRET: "${INTERNAL_API_SECRET:?Set INTERNAL_API_SECRET in .env (run: make setup)}"
       RAILS_MASTER_KEY: "${RAILS_MASTER_KEY:-}"
     ports:

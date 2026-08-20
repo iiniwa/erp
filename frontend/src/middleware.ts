@@ -59,6 +59,6 @@ export const config = {
   // redirect to /login would hand back that page's HTML where JSON (or
   // the service worker script) was expected.
   matcher: [
-    "/((?!api|_next/static|_next/image|favicon.ico|manifest.json|sw.js|icon-192.png|icon-512.png|.*\\.svg).*)",
+    "/((?!api|_next/static|_next/image|favicon.ico|manifest.json|sw.js|icon-192.png|icon-512.png|icon.svg).*)",
   ],
 };
