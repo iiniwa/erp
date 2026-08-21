@@ -42,6 +42,19 @@ RSpec.describe "Api::V1::RolePermissions", type: :request do
       expect(role_permission.rp_can_create).to be true
       expect(role_permission.rp_can_delete).to be false
     end
+
+    it "is forbidden for a non-system_admin" do
+      permission_master = create(:permission_master, pm_code: "address_book")
+      role_permission = permission_master.role_permissions.find_by(rp_user_type: :general)
+      general_user = create(:user, user_type: :general, user_must_change_password: false)
+      _session, token = Session.issue_for(user: general_user, mode: :normal)
+
+      patch "/api/v1/role_permissions/#{role_permission.rp_id}", params: { rp_can_view: true },
+        headers: authenticated_headers(token), as: :json
+
+      expect(response).to have_http_status(:forbidden)
+      expect(role_permission.reload.rp_can_view).to be false
+    end
   end
 
   def json

@@ -34,11 +34,18 @@ class AddressTel < ApplicationRecord
   # non-mobile tel (violating spec section 5.4) or leaving no primary at
   # all. Refusing the destroy outright, via `throw(:abort)`, is the
   # correct outcome for either case.
+  #
+  # Only checks whether *any* mobile tel remains, not whether the
+  # lowest-sorted survivor is mobile: #promote_next_primary (below) picks
+  # the lowest-sorted mobile tel specifically for employee addresses, so a
+  # mobile tel at sort=3 is a valid replacement even if a non-mobile tel
+  # sits at sort=2.
   def prevent_invalid_employee_primary_removal
     return unless at_sort == 1 && employee_address?
 
-    next_record = self.class.where(address_id: address_id).where.not(at_id: at_id).order(:at_sort).first
-    return unless next_record && !next_record.mobile?
+    replacement_exists = self.class.where(address_id: address_id)
+      .where.not(at_id: at_id).exists?(at_label_type: :mobile)
+    return if replacement_exists
 
     errors.add(:base, "従業員のプライマリ電話番号（携帯）は他に携帯番号がない限り削除できません")
     throw :abort
@@ -48,10 +55,19 @@ class AddressTel < ApplicationRecord
   # primary row is removed, promote the next-lowest sort to 1 so a primary
   # always exists. update_column (not update!) skips validations/callbacks
   # since this is a mechanical renumbering, not a user-driven change.
+  #
+  # For an employee address, promotes the lowest-sorted *mobile* tel
+  # specifically (not just the lowest-sorted tel overall) — the two only
+  # differ when a non-mobile tel sits between sort=1 and the next mobile
+  # tel, e.g. mobile(1)/main(2)/mobile(3): destroying sort=1 should
+  # promote the sort=3 mobile, not get stuck on the sort=2 "main" entry.
+  # prevent_invalid_employee_primary_removal above already guarantees a
+  # mobile candidate exists whenever this runs for an employee address.
   def promote_next_primary
     return unless at_sort == 1
 
-    next_record = self.class.where(address_id: address_id).order(:at_sort).first
+    scope = self.class.where(address_id: address_id)
+    next_record = employee_address? ? scope.where(at_label_type: :mobile).order(:at_sort).first : scope.order(:at_sort).first
     next_record&.update_column(:at_sort, 1)
   end
 

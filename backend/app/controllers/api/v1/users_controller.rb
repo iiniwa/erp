@@ -58,6 +58,8 @@ module Api
 
       def destroy
         authorize @user
+        return render_system_admin_protected if @user.system_admin?
+
         @user.soft_delete!
         head :no_content
       end
@@ -68,6 +70,8 @@ module Api
       # change, not a delete).
       def retire
         authorize @user, :update?
+        return render_system_admin_protected if @user.system_admin?
+
         @user.update!(user_type: :retired)
         render json: { user: serialize_employee(@user) }
       end
@@ -77,6 +81,19 @@ module Api
       def set_user
         @user = User.find_by(user_code: params[:user_code])
         render json: { error: "not_found" }, status: :not_found unless @user
+      end
+
+      # The fixed system administrator (spec section 13.1) must always
+      # have exactly one active, non-retired account, since
+      # PermissionMasterPolicy/RolePermissionPolicy hard-code system_admin
+      # as the only role that can manage RBAC itself (see
+      # ApplicationPolicy's comment). Deleting or retiring that account —
+      # even by itself — would permanently lock everyone out of the one
+      # screen that could undo it. db/seeds.rb already requires manual
+      # restoration for the soft-deleted case; this closes off reaching
+      # that state through the API in the first place.
+      def render_system_admin_protected
+        render json: { error: "system_admin_protected" }, status: :conflict
       end
 
       def create_params

@@ -12,7 +12,9 @@ RSpec.describe PermissionMaster do
     pm = create(:permission_master)
 
     expect(pm.role_permissions.pluck(:rp_user_type)).to match_array(RolePermission.rp_user_types.keys)
-    expect(pm.role_permissions).to all(have_attributes(rp_can_view: false, rp_can_create: false))
+    expect(pm.role_permissions).to all(
+      have_attributes(rp_can_view: false, rp_can_create: false, rp_can_update: false, rp_can_delete: false)
+    )
   end
 
   it "destroys its role_permissions when destroyed" do

@@ -162,6 +162,17 @@ RSpec.describe "Api::V1::Users", type: :request do
       expect(User.exists?(employee.user_code)).to be false
       expect(User.with_deleted.exists?(employee.user_code)).to be true
     end
+
+    it "refuses to delete the fixed system administrator, even by themselves" do
+      grant_permission!(:system_admin, "user_manage")
+      sysadmin = create(:user, user_type: :system_admin, user_must_change_password: false)
+      _session, sysadmin_token = Session.issue_for(user: sysadmin, mode: :normal)
+
+      delete "/api/v1/users/#{sysadmin.user_code}", headers: authenticated_headers(sysadmin_token)
+
+      expect(response).to have_http_status(:conflict)
+      expect(User.exists?(sysadmin.user_code)).to be true
+    end
   end
 
   describe "POST /api/v1/users/:user_code/retire" do
@@ -173,6 +184,16 @@ RSpec.describe "Api::V1::Users", type: :request do
 
       expect(response).to have_http_status(:ok)
       expect(employee.reload.user_type).to eq("retired")
+    end
+
+    it "refuses to retire the fixed system administrator" do
+      sysadmin = create(:user, user_type: :system_admin)
+
+      post "/api/v1/users/#{sysadmin.user_code}/retire",
+        headers: authenticated_headers(session_token)
+
+      expect(response).to have_http_status(:conflict)
+      expect(sysadmin.reload.user_type).to eq("system_admin")
     end
   end
 

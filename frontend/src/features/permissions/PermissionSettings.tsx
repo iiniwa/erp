@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import type { PermissionMaster, RolePermission } from "@/lib/api/permissions";
 import { userTypeLabels } from "@/lib/validation/employee";
 import { useToast } from "@/components/ui/ToastProvider";
@@ -26,7 +25,6 @@ type Props = {
 };
 
 export default function PermissionSettings({ permissionMasters, rolePermissions }: Props) {
-  const router = useRouter();
   const { showToast } = useToast();
   const [masters, setMasters] = useState(permissionMasters);
   const [rows, setRows] = useState(rolePermissions);
@@ -77,7 +75,18 @@ export default function PermissionSettings({ permissionMasters, rolePermissions 
       setMasters((prev) => [...prev, body.permission_master]);
       setNewCode("");
       setNewName("");
-      router.refresh();
+
+      // router.refresh() re-runs the server component but does not
+      // remount this already-mounted Client Component, so its useState
+      // would keep the stale `rows` (missing the new feature's
+      // auto-created role_permissions) forever without this. Refetching
+      // directly is simpler than trying to predict the created rows'
+      // shape here.
+      const rolePermissionsResponse = await fetch("/api/role-permissions");
+      if (rolePermissionsResponse.ok) {
+        const rolePermissionsBody = await rolePermissionsResponse.json();
+        setRows(rolePermissionsBody.role_permissions);
+      }
     } catch {
       showToast("通信に失敗しました。ネットワーク接続を確認してください。", "error");
     } finally {

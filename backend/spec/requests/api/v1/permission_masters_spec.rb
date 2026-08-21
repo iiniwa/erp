@@ -36,6 +36,30 @@ RSpec.describe "Api::V1::PermissionMasters", type: :request do
       pm = PermissionMaster.find_by(pm_code: "attendance")
       expect(RolePermission.rp_user_types.keys.all? { |t| pm.role_permissions.exists?(rp_user_type: t) }).to be true
     end
+
+    it "is forbidden for a non-system_admin" do
+      general_user = create(:user, user_type: :general, user_must_change_password: false)
+      _session, token = Session.issue_for(user: general_user, mode: :normal)
+
+      post "/api/v1/permission_masters", params: { pm_code: "attendance", pm_name: "勤怠管理" },
+        headers: authenticated_headers(token), as: :json
+
+      expect(response).to have_http_status(:forbidden)
+    end
+  end
+
+  describe "PATCH /api/v1/permission_masters/:id" do
+    it "is forbidden for a non-system_admin" do
+      pm = create(:permission_master)
+      general_user = create(:user, user_type: :general, user_must_change_password: false)
+      _session, token = Session.issue_for(user: general_user, mode: :normal)
+
+      patch "/api/v1/permission_masters/#{pm.pm_id}", params: { pm_name: "改名" },
+        headers: authenticated_headers(token), as: :json
+
+      expect(response).to have_http_status(:forbidden)
+      expect(pm.reload.pm_name).not_to eq("改名")
+    end
   end
 
   describe "DELETE /api/v1/permission_masters/:id" do
@@ -47,6 +71,17 @@ RSpec.describe "Api::V1::PermissionMasters", type: :request do
 
       expect(response).to have_http_status(:no_content)
       expect(RolePermission.where(rp_id: rp_ids)).to be_empty
+    end
+
+    it "is forbidden for a non-system_admin" do
+      pm = create(:permission_master)
+      general_user = create(:user, user_type: :general, user_must_change_password: false)
+      _session, token = Session.issue_for(user: general_user, mode: :normal)
+
+      delete "/api/v1/permission_masters/#{pm.pm_id}", headers: authenticated_headers(token)
+
+      expect(response).to have_http_status(:forbidden)
+      expect(PermissionMaster.exists?(pm.pm_id)).to be true
     end
   end
 

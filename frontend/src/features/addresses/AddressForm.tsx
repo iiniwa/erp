@@ -59,8 +59,14 @@ function TelFieldRow({
         />
       </div>
       <div className="flex-1">
-        <label className="mb-1 block text-sm font-medium text-brand-gray-700">ラベル</label>
+        <label
+          htmlFor={`address_tels.${index}.at_label_type`}
+          className="mb-1 block text-sm font-medium text-brand-gray-700"
+        >
+          ラベル
+        </label>
         <select
+          id={`address_tels.${index}.at_label_type`}
           className="min-h-11 w-full rounded-md border border-brand-gray-300 px-3 py-2 focus:border-brand-green-500 focus:outline-none focus:ring-1 focus:ring-brand-green-500"
           {...register(`address_tels.${index}.at_label_type`)}
         >
