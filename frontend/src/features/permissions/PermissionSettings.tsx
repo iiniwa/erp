@@ -83,10 +83,15 @@ export default function PermissionSettings({ permissionMasters, rolePermissions 
       // directly is simpler than trying to predict the created rows'
       // shape here.
       const rolePermissionsResponse = await fetch("/api/role-permissions");
-      if (rolePermissionsResponse.ok) {
-        const rolePermissionsBody = await rolePermissionsResponse.json();
-        setRows(rolePermissionsBody.role_permissions);
+      if (!rolePermissionsResponse.ok) {
+        showToast(
+          "機能は追加されましたが、権限一覧の再取得に失敗しました。ページを再読み込みしてください。",
+          "error",
+        );
+        return;
       }
+      const rolePermissionsBody = await rolePermissionsResponse.json();
+      setRows(rolePermissionsBody.role_permissions);
     } catch {
       showToast("通信に失敗しました。ネットワーク接続を確認してください。", "error");
     } finally {
