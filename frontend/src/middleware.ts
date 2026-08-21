@@ -54,5 +54,11 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!api|_next/static|_next/image|favicon.ico|.*\\.svg).*)"],
+  // manifest.json/sw.js/icons must stay reachable unauthenticated: the
+  // browser fetches them directly (not via our fetch() calls), so a
+  // redirect to /login would hand back that page's HTML where JSON (or
+  // the service worker script) was expected.
+  matcher: [
+    "/((?!api|_next/static|_next/image|favicon.ico|manifest.json|sw.js|icon-192.png|icon-512.png|icon\\.svg$).*)",
+  ],
 };

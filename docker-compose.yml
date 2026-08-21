@@ -31,7 +31,7 @@ services:
       DB_PORT: 3306
       DB_USERNAME: "${DB_USERNAME:-app}"
       DB_PASSWORD: "${DB_PASSWORD:?Set DB_PASSWORD in .env (run: make setup)}"
-      FRONTEND_ORIGIN: http://localhost:3000
+      FRONTEND_ORIGIN: "http://localhost:${FRONTEND_PORT:-3000}"
       INTERNAL_API_SECRET: "${INTERNAL_API_SECRET:?Set INTERNAL_API_SECRET in .env (run: make setup)}"
       RAILS_MASTER_KEY: "${RAILS_MASTER_KEY:-}"
     ports:
@@ -51,6 +51,9 @@ services:
     environment:
       BACKEND_INTERNAL_URL: http://backend:3000
       INTERNAL_API_SECRET: "${INTERNAL_API_SECRET:?Set INTERNAL_API_SECRET in .env (run: make setup)}"
+      # Lets next.config.ts allow-list the actual published dev-server
+      # origin (see the comment there for why this is needed).
+      FRONTEND_PORT: "${FRONTEND_PORT:-3000}"
     ports:
       - "${BIND_ADDRESS:-127.0.0.1}:${FRONTEND_PORT:-3000}:3000"
     volumes:
