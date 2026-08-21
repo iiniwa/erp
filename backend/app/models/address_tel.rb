@@ -21,7 +21,20 @@ class AddressTel < ApplicationRecord
   validates :address_id, uniqueness: { scope: :at_label_type }, if: :emergency?
   validate :emergency_contact_requires_employee_address
 
+  after_destroy :promote_next_primary
+
   private
+
+  # Spec section 5.5's sort=1-must-exist rule applies here too: if the
+  # primary row is removed, promote the next-lowest sort to 1 so a primary
+  # always exists. update_column (not update!) skips validations/callbacks
+  # since this is a mechanical renumbering, not a user-driven change.
+  def promote_next_primary
+    return unless at_sort == 1
+
+    next_record = self.class.where(address_id: address_id).order(:at_sort).first
+    next_record&.update_column(:at_sort, 1)
+  end
 
   def emergency_contact_requires_employee_address
     return unless emergency?

@@ -22,6 +22,9 @@ Rails.application.routes.draw do
           post :retire
         end
       end
+
+      resources :addresses, only: %i[index show create update destroy], param: :address_id
+      resources :address_categories, only: %i[index create]
     end
   end
 end
