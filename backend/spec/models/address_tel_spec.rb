@@ -49,15 +49,26 @@ RSpec.describe AddressTel do
       expect(secondary.reload.at_sort).to eq(1)
     end
 
-    it "does not promote a non-mobile tel to primary on an employee address" do
+    it "refuses to destroy an employee's primary mobile tel when a non-mobile tel would become primary" do
       user = create(:user)
       address = create(:address, user: user)
       mobile = create(:address_tel, address: address, at_label_type: :mobile, at_sort: 1)
       main = create(:address_tel, address: address, at_label_type: :main, at_sort: 2)
 
+      expect { mobile.destroy! }.to raise_error(ActiveRecord::RecordNotDestroyed)
+      expect(AddressTel.exists?(mobile.at_id)).to be true
+      expect(main.reload.at_sort).to eq(2)
+    end
+
+    it "allows destroying the primary mobile tel when another mobile tel remains" do
+      user = create(:user)
+      address = create(:address, user: user)
+      mobile = create(:address_tel, address: address, at_label_type: :mobile, at_sort: 1)
+      other_mobile = create(:address_tel, address: address, at_label_type: :mobile, at_sort: 2)
+
       mobile.destroy!
 
-      expect(main.reload.at_sort).to eq(2)
+      expect(other_mobile.reload.at_sort).to eq(1)
     end
   end
 
