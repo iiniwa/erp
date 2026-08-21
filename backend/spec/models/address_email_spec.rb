@@ -24,12 +24,13 @@ RSpec.describe AddressEmail do
 
     it "does not touch sort ordering when a non-primary is destroyed" do
       address = create(:address)
-      create(:address_email, address: address, ae_sort: 1)
+      primary = create(:address_email, address: address, ae_sort: 1)
       secondary = create(:address_email, address: address, ae_sort: 2)
 
       secondary.destroy!
 
       expect(AddressEmail.where(address_id: address.address_id).count).to eq(1)
+      expect(primary.reload.ae_sort).to eq(1)
     end
   end
 end

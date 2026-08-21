@@ -2,7 +2,14 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { useFieldArray, useForm } from "react-hook-form";
+import {
+  useFieldArray,
+  useForm,
+  useWatch,
+  type Control,
+  type FieldErrors,
+  type UseFormRegister,
+} from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { addressSchema, telLabelOptions, type AddressFormValues } from "@/lib/validation/address";
 import type { AddressBookEntry, AddressCategory } from "@/lib/api/addresses";
@@ -18,6 +25,119 @@ type AddressFormProps = {
   categories: AddressCategory[];
   employees: Employee[];
 };
+
+// useWatch (a real hook call) instead of destructuring watch() from
+// useForm and invoking it inline inside a .map(): the latter trips
+// react-hooks/incompatible-library (its return value can't be memoized
+// safely by the React Compiler).
+function TelFieldRow({
+  control,
+  register,
+  errors,
+  index,
+  onRemove,
+}: {
+  control: Control<AddressFormValues>;
+  register: UseFormRegister<AddressFormValues>;
+  errors: FieldErrors<AddressFormValues>;
+  index: number;
+  onRemove: (index: number) => void;
+}) {
+  const destroyed = useWatch({ control, name: `address_tels.${index}._destroy` });
+  const labelType = useWatch({ control, name: `address_tels.${index}.at_label_type` });
+
+  if (destroyed) return null;
+
+  return (
+    <div className="flex flex-col gap-2 rounded-md border border-brand-gray-200 p-3 sm:flex-row sm:items-start">
+      <div className="flex-1">
+        <Input
+          id={`address_tels.${index}.at_number`}
+          label="電話番号"
+          error={errors.address_tels?.[index]?.at_number?.message}
+          {...register(`address_tels.${index}.at_number`)}
+        />
+      </div>
+      <div className="flex-1">
+        <label className="mb-1 block text-sm font-medium text-brand-gray-700">ラベル</label>
+        <select
+          className="min-h-11 w-full rounded-md border border-brand-gray-300 px-3 py-2 focus:border-brand-green-500 focus:outline-none focus:ring-1 focus:ring-brand-green-500"
+          {...register(`address_tels.${index}.at_label_type`)}
+        >
+          {telLabelOptions.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+      </div>
+      {labelType === "free" && (
+        <div className="flex-1">
+          <Input
+            id={`address_tels.${index}.at_label_free`}
+            label="ラベル名"
+            error={errors.address_tels?.[index]?.at_label_free?.message}
+            {...register(`address_tels.${index}.at_label_free`)}
+          />
+        </div>
+      )}
+      <Button
+        type="button"
+        variant="danger"
+        className="mt-6 sm:mt-6"
+        onClick={() => onRemove(index)}
+      >
+        削除
+      </Button>
+    </div>
+  );
+}
+
+function EmailFieldRow({
+  control,
+  register,
+  errors,
+  index,
+  onRemove,
+}: {
+  control: Control<AddressFormValues>;
+  register: UseFormRegister<AddressFormValues>;
+  errors: FieldErrors<AddressFormValues>;
+  index: number;
+  onRemove: (index: number) => void;
+}) {
+  const destroyed = useWatch({ control, name: `address_emails.${index}._destroy` });
+
+  if (destroyed) return null;
+
+  return (
+    <div className="flex flex-col gap-2 rounded-md border border-brand-gray-200 p-3 sm:flex-row sm:items-start">
+      <div className="flex-1">
+        <Input
+          id={`address_emails.${index}.ae_email`}
+          label="メールアドレス"
+          error={errors.address_emails?.[index]?.ae_email?.message}
+          {...register(`address_emails.${index}.ae_email`)}
+        />
+      </div>
+      <div className="flex-1">
+        <Input
+          id={`address_emails.${index}.ae_label`}
+          label="ラベル（任意）"
+          {...register(`address_emails.${index}.ae_label`)}
+        />
+      </div>
+      <Button
+        type="button"
+        variant="danger"
+        className="mt-6 sm:mt-6"
+        onClick={() => onRemove(index)}
+      >
+        削除
+      </Button>
+    </div>
+  );
+}
 
 function toDefaultTel(tel: AddressBookEntry["address_tels"][number]) {
   return {
@@ -49,7 +169,6 @@ export default function AddressForm({ mode, address, categories, employees }: Ad
     register,
     control,
     handleSubmit,
-    watch,
     setValue,
     getValues,
     formState: { errors, isSubmitting },
@@ -288,59 +407,16 @@ export default function AddressForm({ mode, address, categories, employees }: Ad
             </Button>
           </div>
           <div className="flex flex-col gap-3">
-            {telArray.fields.map((field, index) => {
-              if (watch(`address_tels.${index}._destroy`)) return null;
-              const labelType = watch(`address_tels.${index}.at_label_type`);
-
-              return (
-                <div
-                  key={field.id}
-                  className="flex flex-col gap-2 rounded-md border border-brand-gray-200 p-3 sm:flex-row sm:items-start"
-                >
-                  <div className="flex-1">
-                    <Input
-                      id={`address_tels.${index}.at_number`}
-                      label="電話番号"
-                      error={errors.address_tels?.[index]?.at_number?.message}
-                      {...register(`address_tels.${index}.at_number`)}
-                    />
-                  </div>
-                  <div className="flex-1">
-                    <label className="mb-1 block text-sm font-medium text-brand-gray-700">
-                      ラベル
-                    </label>
-                    <select
-                      className="min-h-11 w-full rounded-md border border-brand-gray-300 px-3 py-2 focus:border-brand-green-500 focus:outline-none focus:ring-1 focus:ring-brand-green-500"
-                      {...register(`address_tels.${index}.at_label_type`)}
-                    >
-                      {telLabelOptions.map((option) => (
-                        <option key={option.value} value={option.value}>
-                          {option.label}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  {labelType === "free" && (
-                    <div className="flex-1">
-                      <Input
-                        id={`address_tels.${index}.at_label_free`}
-                        label="ラベル名"
-                        error={errors.address_tels?.[index]?.at_label_free?.message}
-                        {...register(`address_tels.${index}.at_label_free`)}
-                      />
-                    </div>
-                  )}
-                  <Button
-                    type="button"
-                    variant="danger"
-                    className="mt-6 sm:mt-6"
-                    onClick={() => removeTel(index)}
-                  >
-                    削除
-                  </Button>
-                </div>
-              );
-            })}
+            {telArray.fields.map((field, index) => (
+              <TelFieldRow
+                key={field.id}
+                control={control}
+                register={register}
+                errors={errors}
+                index={index}
+                onRemove={removeTel}
+              />
+            ))}
           </div>
         </div>
 
@@ -362,40 +438,16 @@ export default function AddressForm({ mode, address, categories, employees }: Ad
             </Button>
           </div>
           <div className="flex flex-col gap-3">
-            {emailArray.fields.map((field, index) => {
-              if (watch(`address_emails.${index}._destroy`)) return null;
-
-              return (
-                <div
-                  key={field.id}
-                  className="flex flex-col gap-2 rounded-md border border-brand-gray-200 p-3 sm:flex-row sm:items-start"
-                >
-                  <div className="flex-1">
-                    <Input
-                      id={`address_emails.${index}.ae_email`}
-                      label="メールアドレス"
-                      error={errors.address_emails?.[index]?.ae_email?.message}
-                      {...register(`address_emails.${index}.ae_email`)}
-                    />
-                  </div>
-                  <div className="flex-1">
-                    <Input
-                      id={`address_emails.${index}.ae_label`}
-                      label="ラベル（任意）"
-                      {...register(`address_emails.${index}.ae_label`)}
-                    />
-                  </div>
-                  <Button
-                    type="button"
-                    variant="danger"
-                    className="mt-6 sm:mt-6"
-                    onClick={() => removeEmail(index)}
-                  >
-                    削除
-                  </Button>
-                </div>
-              );
-            })}
+            {emailArray.fields.map((field, index) => (
+              <EmailFieldRow
+                key={field.id}
+                control={control}
+                register={register}
+                errors={errors}
+                index={index}
+                onRemove={removeEmail}
+              />
+            ))}
           </div>
         </div>
 

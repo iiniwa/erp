@@ -29,11 +29,26 @@ class AddressTel < ApplicationRecord
   # primary row is removed, promote the next-lowest sort to 1 so a primary
   # always exists. update_column (not update!) skips validations/callbacks
   # since this is a mechanical renumbering, not a user-driven change.
+  #
+  # For an employee address, Address#primary_tel_must_be_mobile_for_employee
+  # already rejects any request that would leave a non-mobile tel as the
+  # new lowest-sorted survivor, so this defensive guard should never
+  # actually skip a promotion via the normal controller path. It only
+  # matters for direct model-level destroys that bypass Address's
+  # validation (e.g. `AddressTel#destroy!` called on its own) — without
+  # it, that path could still promote a non-mobile tel to sort=1.
   def promote_next_primary
     return unless at_sort == 1
 
     next_record = self.class.where(address_id: address_id).order(:at_sort).first
-    next_record&.update_column(:at_sort, 1)
+    return unless next_record
+    return if employee_address? && !next_record.mobile?
+
+    next_record.update_column(:at_sort, 1)
+  end
+
+  def employee_address?
+    address&.address_user_code.present?
   end
 
   def emergency_contact_requires_employee_address

@@ -154,6 +154,20 @@ RSpec.describe "Api::V1::Addresses", type: :request do
       expect(response).to have_http_status(:ok)
       expect(secondary.reload.ae_sort).to eq(1)
     end
+
+    it "rejects destroying an employee's primary mobile tel when a non-mobile tel would become primary" do
+      user = create(:user)
+      address = create(:address, address_category: category, user: user)
+      mobile = create(:address_tel, address: address, at_label_type: :mobile, at_sort: 1)
+      create(:address_tel, address: address, at_label_type: :main, at_sort: 2)
+
+      patch "/api/v1/addresses/#{address.address_id}", params: {
+        address_tels_attributes: [ { id: mobile.at_id, _destroy: true } ]
+      }, headers: authenticated_headers(session_token), as: :json
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(AddressTel.exists?(mobile.at_id)).to be true
+    end
   end
 
   describe "DELETE /api/v1/addresses/:address_id" do

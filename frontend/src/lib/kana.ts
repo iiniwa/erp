@@ -4,7 +4,11 @@
 // query and every searched field through this before comparing makes the
 // two kana scripts equivalent without needing a second stored column.
 export function toHiragana(value: string): string {
-  return value.replace(/[ァ-ヶ]/g, (char) => String.fromCharCode(char.charCodeAt(0) - 0x60));
+  // NFKC first so half-width katakana (e.g. "ｶﾀｶﾅ") normalizes to
+  // full-width before the katakana->hiragana conversion below runs.
+  return value
+    .normalize("NFKC")
+    .replace(/[ァ-ヶ]/g, (char) => String.fromCharCode(char.charCodeAt(0) - 0x60));
 }
 
 export function normalizeForSearch(value: string): string {

@@ -32,13 +32,18 @@ class Address < ApplicationRecord
     self.address_id ||= self.class.generate_code(type_code: "8")
   end
 
-  # Spec section 5.4: an employee's primary (sort=1) contact number is
-  # always their mobile number; only enforced for employee-linked addresses
-  # (address_user_code present) that actually have a sort=1 tel.
+  # Spec section 5.4: an employee's primary contact number is always their
+  # mobile number. Uses the lowest at_sort among *surviving* (non-destroyed)
+  # tels, not literally "the one currently marked at_sort == 1": when a
+  # request destroys today's sort=1 mobile tel, AddressTel#promote_next_primary
+  # would otherwise renumber whichever tel remains lowest-sorted (e.g. a
+  # "main" line at sort=2) up to sort=1 after this validation already
+  # passed, silently breaking the rule. Checking min_by(&:at_sort) predicts
+  # that future primary and rejects the request up front instead.
   def primary_tel_must_be_mobile_for_employee
     return unless address_user_code.present?
 
-    primary = address_tels.reject(&:marked_for_destruction?).find { |tel| tel.at_sort == 1 }
+    primary = address_tels.reject(&:marked_for_destruction?).min_by(&:at_sort)
     return unless primary
     return if primary.mobile?
 

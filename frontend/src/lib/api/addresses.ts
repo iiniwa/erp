@@ -35,12 +35,19 @@ export type AddressCategory = { ac_id: number; ac_name: string; ac_sort: number 
 
 // Server-side data fetchers for Server Components. Client Components use
 // the /api/addresses BFF routes instead (see lib/backend.ts).
+//
+// Only "no session" returns an empty list. A failure response (expired
+// session, insufficient role permissions, backend error) throws instead of
+// silently rendering an empty state, since that would otherwise look
+// identical to "there really is no data" (see fetchAddress below).
 export async function fetchAddresses(): Promise<AddressBookEntry[]> {
   const token = await getSessionToken();
   if (!token) return [];
 
   const response = await backendFetch("/api/v1/addresses", { sessionToken: token });
-  if (!response.ok) return [];
+  if (!response.ok) {
+    throw new Error(`Failed to fetch addresses (status ${response.status})`);
+  }
 
   const body = (await response.json()) as { addresses: AddressBookEntry[] };
   return body.addresses;
@@ -71,7 +78,9 @@ export async function fetchAddressCategories(): Promise<AddressCategory[]> {
   if (!token) return [];
 
   const response = await backendFetch("/api/v1/address_categories", { sessionToken: token });
-  if (!response.ok) return [];
+  if (!response.ok) {
+    throw new Error(`Failed to fetch address categories (status ${response.status})`);
+  }
 
   const body = (await response.json()) as { address_categories: AddressCategory[] };
   return body.address_categories;
