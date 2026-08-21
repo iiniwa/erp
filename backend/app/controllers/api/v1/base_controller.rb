@@ -75,8 +75,25 @@ module Api
           user_type: user.user_type,
           user_familyname: user.user_familyname,
           user_firstname: user.user_firstname,
-          user_must_change_password: user.user_must_change_password
+          user_must_change_password: user.user_must_change_password,
+          permissions: permissions_for(user)
         }
+      end
+
+      # Lets the frontend hide/show actions it has no access to without
+      # guessing at the RBAC rules; the backend's Pundit policies remain
+      # the actual enforcement point regardless of what the UI shows.
+      def permissions_for(user)
+        RolePermission.includes(:permission_master)
+          .where(rp_user_type: user.user_type)
+          .each_with_object({}) do |rp, memo|
+            memo[rp.permission_master.pm_code] = {
+              view: rp.rp_can_view,
+              create: rp.rp_can_create,
+              update: rp.rp_can_update,
+              delete: rp.rp_can_delete
+            }
+          end
       end
     end
   end

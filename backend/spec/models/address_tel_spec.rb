@@ -70,6 +70,19 @@ RSpec.describe AddressTel do
 
       expect(other_mobile.reload.at_sort).to eq(1)
     end
+
+    it "promotes a mobile tel past a non-mobile one that sorts lower" do
+      user = create(:user)
+      address = create(:address, user: user)
+      mobile = create(:address_tel, address: address, at_label_type: :mobile, at_sort: 1)
+      main = create(:address_tel, address: address, at_label_type: :main, at_sort: 2)
+      other_mobile = create(:address_tel, address: address, at_label_type: :mobile, at_sort: 3)
+
+      mobile.destroy!
+
+      expect(other_mobile.reload.at_sort).to eq(1)
+      expect(main.reload.at_sort).to eq(2)
+    end
   end
 
   describe "free-form label" do

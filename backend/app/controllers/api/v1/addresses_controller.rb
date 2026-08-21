@@ -2,22 +2,29 @@ module Api
   module V1
     # Address book CRUD (spec sections 5.2-5.5). Search (section 6) is
     # implemented client-side against the full #index payload, so #index
-    # eager-loads tels/emails rather than paginating.
+    # eager-loads tels/emails rather than paginating. Access is gated by
+    # AddressPolicy (t.role_permissions, spec section 4); require_normal_session!
+    # additionally keeps QR-limited sessions out entirely, regardless of role.
     class AddressesController < BaseController
       before_action :authenticate_session!
       before_action :enforce_password_reset!
+      before_action :require_normal_session!
       before_action :set_address, only: %i[show update destroy]
 
       def index
+        authorize Address
         addresses = Address.includes(:address_category, :address_tels, :address_emails).order(:address_id)
         render json: { addresses: addresses.map { |address| serialize_address(address) } }
       end
 
       def show
+        authorize @address
         render json: { address: serialize_address(@address) }
       end
 
       def create
+        authorize Address
+
         address = Address.new(address_params)
         if address.save
           render json: { address: serialize_address(address) }, status: :created
@@ -27,6 +34,8 @@ module Api
       end
 
       def update
+        authorize @address
+
         if @address.update(address_params)
           render json: { address: serialize_address(@address) }
         else
@@ -38,6 +47,7 @@ module Api
       # section 5.2), but this action is for genuinely removing a business
       # contact entry; SoftDeletable's default_scope keeps it out of #index.
       def destroy
+        authorize @address
         @address.soft_delete!
         head :no_content
       end

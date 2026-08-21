@@ -29,6 +29,13 @@ export async function getSessionToken() {
   return cookieStore.get(SESSION_COOKIE_NAME)?.value ?? null;
 }
 
+export type FeaturePermission = {
+  view: boolean;
+  create: boolean;
+  update: boolean;
+  delete: boolean;
+};
+
 export type CurrentUser = {
   user_code: string;
   user_id: string | null;
@@ -36,6 +43,7 @@ export type CurrentUser = {
   user_familyname: string;
   user_firstname: string;
   user_must_change_password: boolean;
+  permissions: Record<string, FeaturePermission>;
 };
 
 // Returns null both when there is no session and when the password reset

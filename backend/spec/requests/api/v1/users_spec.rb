@@ -7,6 +7,8 @@ RSpec.describe "Api::V1::Users", type: :request do
     raw_token
   end
 
+  before { grant_permission!(:general, "user_manage") }
+
   describe "GET /api/v1/users" do
     it "lists users, excluding soft-deleted ones" do
       active = create(:user)
@@ -30,6 +32,23 @@ RSpec.describe "Api::V1::Users", type: :request do
     it "blocks access while the forced password reset is pending" do
       pending_user = create(:user, user_must_change_password: true)
       _session, token = Session.issue_for(user: pending_user, mode: :normal)
+
+      get "/api/v1/users", headers: authenticated_headers(token)
+
+      expect(response).to have_http_status(:forbidden)
+    end
+
+    it "blocks a QR-limited session regardless of role permissions" do
+      _session, token = Session.issue_for(user: admin, mode: :qr_limited)
+
+      get "/api/v1/users", headers: authenticated_headers(token)
+
+      expect(response).to have_http_status(:forbidden)
+    end
+
+    it "blocks a role with no user_manage permission" do
+      no_permission_user = create(:user, user_type: :part_time, user_must_change_password: false)
+      _session, token = Session.issue_for(user: no_permission_user, mode: :normal)
 
       get "/api/v1/users", headers: authenticated_headers(token)
 
@@ -143,6 +162,17 @@ RSpec.describe "Api::V1::Users", type: :request do
       expect(User.exists?(employee.user_code)).to be false
       expect(User.with_deleted.exists?(employee.user_code)).to be true
     end
+
+    it "refuses to delete the fixed system administrator, even by themselves" do
+      grant_permission!(:system_admin, "user_manage")
+      sysadmin = create(:user, user_type: :system_admin, user_must_change_password: false)
+      _session, sysadmin_token = Session.issue_for(user: sysadmin, mode: :normal)
+
+      delete "/api/v1/users/#{sysadmin.user_code}", headers: authenticated_headers(sysadmin_token)
+
+      expect(response).to have_http_status(:conflict)
+      expect(User.exists?(sysadmin.user_code)).to be true
+    end
   end
 
   describe "POST /api/v1/users/:user_code/retire" do
@@ -154,6 +184,16 @@ RSpec.describe "Api::V1::Users", type: :request do
 
       expect(response).to have_http_status(:ok)
       expect(employee.reload.user_type).to eq("retired")
+    end
+
+    it "refuses to retire the fixed system administrator" do
+      sysadmin = create(:user, user_type: :system_admin)
+
+      post "/api/v1/users/#{sysadmin.user_code}/retire",
+        headers: authenticated_headers(session_token)
+
+      expect(response).to have_http_status(:conflict)
+      expect(sysadmin.reload.user_type).to eq("system_admin")
     end
   end
 

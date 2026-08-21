@@ -25,6 +25,9 @@ Rails.application.routes.draw do
 
       resources :addresses, only: %i[index show create update destroy], param: :address_id
       resources :address_categories, only: %i[index create]
+
+      resources :permission_masters, only: %i[index create update destroy]
+      resources :role_permissions, only: %i[index update]
     end
   end
 end
