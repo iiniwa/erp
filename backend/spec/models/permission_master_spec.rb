@@ -7,4 +7,20 @@ RSpec.describe PermissionMaster do
 
     expect(duplicate).not_to be_valid
   end
+
+  it "backfills a no-access role_permission row for every user_type on create" do
+    pm = create(:permission_master)
+
+    expect(pm.role_permissions.pluck(:rp_user_type)).to match_array(RolePermission.rp_user_types.keys)
+    expect(pm.role_permissions).to all(have_attributes(rp_can_view: false, rp_can_create: false))
+  end
+
+  it "destroys its role_permissions when destroyed" do
+    pm = create(:permission_master)
+    rp_ids = pm.role_permissions.pluck(:rp_id)
+
+    pm.destroy!
+
+    expect(RolePermission.where(rp_id: rp_ids)).to be_empty
+  end
 end

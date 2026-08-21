@@ -8,6 +8,8 @@ RSpec.describe "Api::V1::Addresses", type: :request do
   end
   let(:category) { create(:address_category) }
 
+  before { grant_permission!(:general, "address_book") }
+
   describe "GET /api/v1/addresses" do
     it "lists addresses with their tels/emails joined, excluding soft-deleted ones" do
       active = create(:address, address_category: category)
@@ -42,6 +44,23 @@ RSpec.describe "Api::V1::Addresses", type: :request do
       get "/api/v1/addresses", headers: internal_api_headers
 
       expect(response).to have_http_status(:unauthorized)
+    end
+
+    it "blocks a QR-limited session regardless of role permissions" do
+      _session, token = Session.issue_for(user: admin, mode: :qr_limited)
+
+      get "/api/v1/addresses", headers: authenticated_headers(token)
+
+      expect(response).to have_http_status(:forbidden)
+    end
+
+    it "blocks a role with no address_book permission" do
+      no_permission_user = create(:user, user_type: :part_time, user_must_change_password: false)
+      _session, token = Session.issue_for(user: no_permission_user, mode: :normal)
+
+      get "/api/v1/addresses", headers: authenticated_headers(token)
+
+      expect(response).to have_http_status(:forbidden)
     end
   end
 

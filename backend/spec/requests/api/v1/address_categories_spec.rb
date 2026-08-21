@@ -7,6 +7,8 @@ RSpec.describe "Api::V1::AddressCategories", type: :request do
     raw_token
   end
 
+  before { grant_permission!(:general, "address_book") }
+
   describe "GET /api/v1/address_categories" do
     it "lists categories ordered by ac_sort" do
       create(:address_category, ac_name: "取引先", ac_sort: 2)
@@ -16,6 +18,15 @@ RSpec.describe "Api::V1::AddressCategories", type: :request do
 
       expect(response).to have_http_status(:ok)
       expect(json["address_categories"].map { |c| c["ac_name"] }).to eq(%w[社内 取引先])
+    end
+
+    it "blocks a role with no address_book permission" do
+      no_permission_user = create(:user, user_type: :part_time, user_must_change_password: false)
+      _session, token = Session.issue_for(user: no_permission_user, mode: :normal)
+
+      get "/api/v1/address_categories", headers: authenticated_headers(token)
+
+      expect(response).to have_http_status(:forbidden)
     end
   end
 

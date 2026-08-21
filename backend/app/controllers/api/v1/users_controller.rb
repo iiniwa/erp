@@ -1,20 +1,23 @@
 module Api
   module V1
-    # Employee CRUD + retirement (spec section 5.1). Permission checks
-    # (Issue #6 RBAC) are not wired in yet, per Issue #4's scope; only
-    # "must be logged in and have finished the forced password reset"
-    # applies for now.
+    # Employee CRUD + retirement (spec section 5.1). Access is gated by
+    # UserPolicy (t.role_permissions, spec section 4) on top of the
+    # session/password-reset checks; require_normal_session! additionally
+    # keeps QR-limited sessions out entirely, regardless of role.
     class UsersController < BaseController
       before_action :authenticate_session!
       before_action :enforce_password_reset!
+      before_action :require_normal_session!
       before_action :set_user, only: %i[show update destroy retire]
 
       def index
+        authorize User
         users = User.order(:user_code)
         render json: { users: users.map { |user| serialize_employee(user) } }
       end
 
       def show
+        authorize @user
         render json: { user: serialize_employee(@user) }
       end
 
@@ -22,6 +25,8 @@ module Api
       # matching the same rule the fixed admin seed follows, so every new
       # employee goes through the same first-login flow.
       def create
+        authorize User
+
         birth = parse_date(params[:user_birth])
         unless birth
           return render json: { error: "user_birth_required" }, status: :unprocessable_entity
@@ -42,6 +47,8 @@ module Api
       # Deliberately excludes user_type: retirement goes through #retire
       # instead, so a stray edit here can't silently grant/revoke admin.
       def update
+        authorize @user
+
         if @user.update(update_params)
           render json: { user: serialize_employee(@user) }
         else
@@ -50,14 +57,17 @@ module Api
       end
 
       def destroy
+        authorize @user
         @user.soft_delete!
         head :no_content
       end
 
       # Retirement (user_type: 9) is independent of soft deletion (spec
       # section 5.1): a retired employee still appears in listings and
-      # keeps their address book entry.
+      # keeps their address book entry. Gated on #update? (it's a profile
+      # change, not a delete).
       def retire
+        authorize @user, :update?
         @user.update!(user_type: :retired)
         render json: { user: serialize_employee(@user) }
       end

@@ -7,6 +7,8 @@ RSpec.describe "Api::V1::Users", type: :request do
     raw_token
   end
 
+  before { grant_permission!(:general, "user_manage") }
+
   describe "GET /api/v1/users" do
     it "lists users, excluding soft-deleted ones" do
       active = create(:user)
@@ -30,6 +32,23 @@ RSpec.describe "Api::V1::Users", type: :request do
     it "blocks access while the forced password reset is pending" do
       pending_user = create(:user, user_must_change_password: true)
       _session, token = Session.issue_for(user: pending_user, mode: :normal)
+
+      get "/api/v1/users", headers: authenticated_headers(token)
+
+      expect(response).to have_http_status(:forbidden)
+    end
+
+    it "blocks a QR-limited session regardless of role permissions" do
+      _session, token = Session.issue_for(user: admin, mode: :qr_limited)
+
+      get "/api/v1/users", headers: authenticated_headers(token)
+
+      expect(response).to have_http_status(:forbidden)
+    end
+
+    it "blocks a role with no user_manage permission" do
+      no_permission_user = create(:user, user_type: :part_time, user_must_change_password: false)
+      _session, token = Session.issue_for(user: no_permission_user, mode: :normal)
 
       get "/api/v1/users", headers: authenticated_headers(token)
 
