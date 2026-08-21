@@ -82,4 +82,9 @@ Rails.application.configure do
     ENV.fetch("ACTIVE_RECORD_ENCRYPTION_DETERMINISTIC_KEY", "insecure_dev_deterministic_key_do_not_use")
   config.active_record.encryption.key_derivation_salt =
     ENV.fetch("ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT", "insecure_dev_key_derivation_salt_do_not_use")
+
+  # The Next.js BFF calls this API using the Docker Compose service name
+  # (http://backend:3000), which Rails' default host authorization does not
+  # recognize (it only permits .localhost/.test suffixes and IP literals).
+  config.hosts << "backend"
 end
