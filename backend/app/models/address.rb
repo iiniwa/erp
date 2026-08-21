@@ -12,10 +12,17 @@ class Address < ApplicationRecord
   # which never fires Rails' destroy callbacks, so a dependent behavior here
   # would silently never run. The DB foreign keys restrict hard-deleting an
   # address that still has tel/email rows, by design.
-  has_many :address_tels, foreign_key: :address_id, primary_key: :address_id, inverse_of: :address
-  has_many :address_emails, foreign_key: :address_id, primary_key: :address_id, inverse_of: :address
+  has_many :address_tels, -> { order(:at_sort) },
+    foreign_key: :address_id, primary_key: :address_id, inverse_of: :address
+  has_many :address_emails, -> { order(:ae_sort) },
+    foreign_key: :address_id, primary_key: :address_id, inverse_of: :address
+
+  accepts_nested_attributes_for :address_tels, allow_destroy: true, reject_if: :all_blank
+  accepts_nested_attributes_for :address_emails, allow_destroy: true, reject_if: :all_blank
 
   validates :address_name, :address_ruby, presence: true
+  validate :primary_tel_must_be_mobile_for_employee
+  validate :only_one_emergency_tel
 
   before_create :assign_address_id
 
@@ -23,5 +30,36 @@ class Address < ApplicationRecord
 
   def assign_address_id
     self.address_id ||= self.class.generate_code(type_code: "8")
+  end
+
+  # Spec section 5.4: an employee's primary contact number is always their
+  # mobile number. Uses the lowest at_sort among *surviving* (non-destroyed)
+  # tels, not literally "the one currently marked at_sort == 1": when a
+  # request destroys today's sort=1 mobile tel, AddressTel#promote_next_primary
+  # would otherwise renumber whichever tel remains lowest-sorted (e.g. a
+  # "main" line at sort=2) up to sort=1 after this validation already
+  # passed, silently breaking the rule. Checking min_by(&:at_sort) predicts
+  # that future primary and rejects the request up front instead.
+  def primary_tel_must_be_mobile_for_employee
+    return unless address_user_code.present?
+
+    primary = address_tels.reject(&:marked_for_destruction?).min_by(&:at_sort)
+    return unless primary
+    return if primary.mobile?
+
+    errors.add(:base, "従業員のプライマリ電話番号（並び順1番）は携帯である必要があります")
+  end
+
+  # AddressTel's own uniqueness validation only catches a duplicate
+  # emergency contact against rows already persisted in the DB; it can't
+  # see two brand-new emergency tels submitted together in the same nested
+  # request (neither exists yet when each is individually validated), which
+  # would otherwise only surface as a raw ActiveRecord::RecordNotUnique at
+  # the DB layer. Checking the in-memory collection here catches that case.
+  def only_one_emergency_tel
+    emergency_tels = address_tels.reject(&:marked_for_destruction?).select(&:emergency?)
+    return if emergency_tels.size <= 1
+
+    errors.add(:base, "緊急連絡先は1件までしか登録できません")
   end
 end

@@ -23,4 +23,29 @@ RSpec.describe Address do
     address = build(:address, user: user)
     expect(address).to be_valid
   end
+
+  describe "primary tel must be mobile for employee addresses" do
+    it "rejects an employee address whose sort=1 tel is not mobile" do
+      user = create(:user)
+      address = build(:address, user: user)
+      address.address_tels.build(at_number: "0311112222", at_label_type: :main, at_sort: 1)
+
+      expect(address).not_to be_valid
+    end
+
+    it "accepts an employee address whose sort=1 tel is mobile" do
+      user = create(:user)
+      address = build(:address, user: user)
+      address.address_tels.build(at_number: "09000000000", at_label_type: :mobile, at_sort: 1)
+
+      expect(address).to be_valid
+    end
+
+    it "does not enforce the mobile rule for non-employee addresses" do
+      address = build(:address, user: nil)
+      address.address_tels.build(at_number: "0311112222", at_label_type: :main, at_sort: 1)
+
+      expect(address).to be_valid
+    end
+  end
 end
