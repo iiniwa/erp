@@ -8,12 +8,17 @@ import {
   userTypeOptions,
   type CreateEmployeeFormValues,
 } from "@/lib/validation/employee";
+import type { PermissionRole } from "@/lib/api/permissions";
 import { useToast } from "@/components/ui/ToastProvider";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import Card from "@/components/ui/Card";
 
-export default function EmployeeCreateForm() {
+export default function EmployeeCreateForm({
+  permissionRoles,
+}: {
+  permissionRoles: PermissionRole[];
+}) {
   const router = useRouter();
   const { showToast } = useToast();
   const {
@@ -27,7 +32,7 @@ export default function EmployeeCreateForm() {
       const response = await fetch("/api/employees", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(values),
+        body: JSON.stringify({ ...values, role_id: values.role_id || null }),
       });
 
       const body = await response.json().catch(() => ({}));
@@ -94,6 +99,24 @@ export default function EmployeeCreateForm() {
               {errors.user_type.message}
             </p>
           )}
+        </div>
+
+        <div>
+          <label htmlFor="role_id" className="mb-1 block text-sm font-medium text-brand-gray-700">
+            権限ロール（任意）
+          </label>
+          <select
+            id="role_id"
+            className="min-h-11 w-full rounded-md border border-brand-gray-300 px-3 py-2 focus:border-brand-green-500 focus:outline-none focus:ring-1 focus:ring-brand-green-500"
+            {...register("role_id")}
+          >
+            <option value="">未設定</option>
+            {permissionRoles.map((role) => (
+              <option key={role.role_id} value={role.role_id}>
+                {role.role_name}
+              </option>
+            ))}
+          </select>
         </div>
 
         <Input

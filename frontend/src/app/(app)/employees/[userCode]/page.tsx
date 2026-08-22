@@ -51,6 +51,7 @@ export default async function EmployeeDetailPage({
             {employee.user_familyname_ruby} {employee.user_firstname_ruby}
           </Field>
           <Field label="区分">{userTypeLabels[employee.user_type] ?? employee.user_type}</Field>
+          <Field label="権限ロール">{employee.role_name ?? "未設定"}</Field>
           <Field label="ログインID">{employee.user_id ?? "未設定"}</Field>
           <Field label="生年月日">{employee.user_birth ?? "未設定"}</Field>
           <Field label="入社日">{employee.user_join_date ?? "未設定"}</Field>

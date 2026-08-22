@@ -5,6 +5,8 @@ export type Employee = {
   user_code: string;
   user_id: string | null;
   user_type: string;
+  role_id: number | null;
+  role_name: string | null;
   user_familyname: string;
   user_firstname: string;
   user_familyname_ruby: string;

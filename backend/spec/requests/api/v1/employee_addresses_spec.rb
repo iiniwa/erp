@@ -7,7 +7,7 @@ RSpec.describe "Api::V1::EmployeeAddresses", type: :request do
     raw_token
   end
 
-  before { grant_permission!(:general, "user_manage") }
+  before { grant_permission!(admin, "user_manage") }
 
   describe "GET /api/v1/users/:user_code/address" do
     it "returns an unsaved default entry when the employee has no address yet" do

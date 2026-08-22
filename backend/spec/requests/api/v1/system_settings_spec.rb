@@ -38,13 +38,16 @@ RSpec.describe "Api::V1::SystemSettings", type: :request do
   describe "PATCH /api/v1/system_setting" do
     it "updates fields and records the updating user" do
       patch "/api/v1/system_setting",
-        params: { company_name: "新会社名", login_lockout_count: 5 },
+        params: { company_name: "新会社名", login_lockout_count: 5, company_fax: "03-1234-5678",
+                  company_toll_free: "0120-123-456" },
         headers: authenticated_headers(session_token), as: :json
 
       expect(response).to have_http_status(:ok)
       setting = SystemSetting.instance
       expect(setting.company_name).to eq("新会社名")
       expect(setting.login_lockout_count).to eq(5)
+      expect(setting.company_fax).to eq("03-1234-5678")
+      expect(setting.company_toll_free).to eq("0120-123-456")
       expect(setting.updated_by).to eq(admin.user_code)
     end
 

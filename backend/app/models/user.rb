@@ -21,6 +21,10 @@ class User < ApplicationRecord
 
   has_many :addresses, foreign_key: :address_user_code, inverse_of: :user
   has_many :sessions, foreign_key: :user_code, inverse_of: :user
+  # The freely admin-managed permission level (see PermissionRole),
+  # independent of user_type. Optional: an employee with no role assigned
+  # simply has no RBAC-governed access (see ApplicationPolicy).
+  belongs_to :permission_role, foreign_key: :role_id, primary_key: :role_id, optional: true
 
   validates :user_id, uniqueness: true, allow_nil: true
   validates :user_familyname, :user_firstname, :user_familyname_ruby, :user_firstname_ruby, presence: true

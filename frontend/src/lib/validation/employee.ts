@@ -36,16 +36,22 @@ const nameFields = {
   user_id: z.string().optional().or(z.literal("")),
 };
 
+// The freely admin-managed permission level (see PermissionRole),
+// independent of user_type below. "" means unassigned (no RBAC-governed
+// access until an admin picks one).
+const roleField = { role_id: z.string().optional().or(z.literal("")) };
+
 export const createEmployeeSchema = z.object({
   user_type: z.enum(USER_TYPE_VALUES),
   user_birth: z.string().min(1, "生年月日を入力してください"),
   ...nameFields,
+  ...roleField,
 });
 
 export type CreateEmployeeFormValues = z.infer<typeof createEmployeeSchema>;
 
 // No user_type/user_birth: retirement goes through its own action, and
 // the birthdate is only used once, to derive the initial password.
-export const updateEmployeeSchema = z.object(nameFields);
+export const updateEmployeeSchema = z.object({ ...nameFields, ...roleField });
 
 export type UpdateEmployeeFormValues = z.infer<typeof updateEmployeeSchema>;

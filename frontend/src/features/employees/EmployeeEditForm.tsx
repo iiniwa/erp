@@ -9,8 +9,11 @@ import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import Card from "@/components/ui/Card";
 import type { Employee } from "@/lib/api/employees";
+import type { PermissionRole } from "@/lib/api/permissions";
 
-export default function EmployeeEditForm({ employee }: { employee: Employee }) {
+type Props = { employee: Employee; permissionRoles: PermissionRole[] };
+
+export default function EmployeeEditForm({ employee, permissionRoles }: Props) {
   const router = useRouter();
   const { showToast } = useToast();
   const {
@@ -26,6 +29,7 @@ export default function EmployeeEditForm({ employee }: { employee: Employee }) {
       user_firstname_ruby: employee.user_firstname_ruby,
       user_join_date: employee.user_join_date ?? "",
       user_id: employee.user_id ?? "",
+      role_id: employee.role_id?.toString() ?? "",
     },
   });
 
@@ -34,7 +38,7 @@ export default function EmployeeEditForm({ employee }: { employee: Employee }) {
       const response = await fetch(`/api/employees/${employee.user_code}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(values),
+        body: JSON.stringify({ ...values, role_id: values.role_id || null }),
       });
 
       const body = await response.json().catch(() => ({}));
@@ -94,6 +98,23 @@ export default function EmployeeEditForm({ employee }: { employee: Employee }) {
           error={errors.user_id?.message}
           {...register("user_id")}
         />
+        <div>
+          <label htmlFor="role_id" className="mb-1 block text-sm font-medium text-brand-gray-700">
+            権限ロール（任意）
+          </label>
+          <select
+            id="role_id"
+            className="min-h-11 w-full rounded-md border border-brand-gray-300 px-3 py-2 focus:border-brand-green-500 focus:outline-none focus:ring-1 focus:ring-brand-green-500"
+            {...register("role_id")}
+          >
+            <option value="">未設定</option>
+            {permissionRoles.map((role) => (
+              <option key={role.role_id} value={role.role_id}>
+                {role.role_name}
+              </option>
+            ))}
+          </select>
+        </div>
         <Button type="submit" disabled={isSubmitting} className="mt-2">
           {isSubmitting ? "更新中..." : "更新"}
         </Button>
