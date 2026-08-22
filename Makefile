@@ -28,8 +28,9 @@ _generate-env: ## パスワード/シークレット類をランダム生成し�
 	db_password="$$(openssl rand -hex 24)"; rc=$$((rc + $$?)); \
 	internal_api_secret="$$(openssl rand -hex 32)"; rc=$$((rc + $$?)); \
 	sftpgo_admin_password="$$(openssl rand -hex 16)"; rc=$$((rc + $$?)); \
+	sftpgo_app_password="$$(openssl rand -hex 16)"; rc=$$((rc + $$?)); \
 	if [ "$$rc" -ne 0 ] || [ -z "$$db_root_password" ] || [ -z "$$db_password" ] || \
-	   [ -z "$$internal_api_secret" ] || [ -z "$$sftpgo_admin_password" ]; then \
+	   [ -z "$$internal_api_secret" ] || [ -z "$$sftpgo_admin_password" ] || [ -z "$$sftpgo_app_password" ]; then \
 		echo "シークレットの生成に失敗しました（opensslを確認してください）" >&2; \
 		exit 1; \
 	fi; \
@@ -40,8 +41,9 @@ _generate-env: ## パスワード/シークレット類をランダム生成し�
 	sed -i.bak "s/^DB_PASSWORD=.*/DB_PASSWORD=$$db_password/" "$$env_tmp" && \
 	sed -i.bak "s/^INTERNAL_API_SECRET=.*/INTERNAL_API_SECRET=$$internal_api_secret/" "$$env_tmp" && \
 	sed -i.bak "s/^SFTPGO_ADMIN_PASSWORD=.*/SFTPGO_ADMIN_PASSWORD=$$sftpgo_admin_password/" "$$env_tmp" && \
+	sed -i.bak "s/^SFTPGO_APP_PASSWORD=.*/SFTPGO_APP_PASSWORD=$$sftpgo_app_password/" "$$env_tmp" && \
 	mv "$$env_tmp" .env && \
-	echo ".env を作成しました（DB/内部API/SFTPGo管理者パスワードはランダム生成済み）"
+	echo ".env を作成しました（DB/内部API/SFTPGo管理者・アプリパスワードはランダム生成済み）。続けて 'docker compose exec backend bin/rails sftpgo:provision' を実行してください"
 
 build: ## `make build dev` または `make build prod` でイメージをビルド
 ifneq (,$(filter dev,$(MAKECMDGOALS)))

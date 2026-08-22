@@ -36,11 +36,16 @@ services:
       # No Redis service is provisioned by this Compose stack; point this at
       # an externally managed Redis instance (required for Action Cable).
       REDIS_URL: ${REDIS_URL:?REDIS_URL is required (see docker-compose.prod.yml)}
+      SFTPGO_URL: http://sftpgo:8080
+      SFTPGO_APP_USER: ${SFTPGO_APP_USER:-erp_app}
+      SFTPGO_APP_PASSWORD: ${SFTPGO_APP_PASSWORD:?SFTPGO_APP_PASSWORD is required}
     ports:
       - "${BIND_ADDRESS:-127.0.0.1}:${BACKEND_PORT:-3001}:3000"
     depends_on:
       db:
         condition: service_healthy
+      sftpgo:
+        condition: service_started
 
   frontend:
     build:
@@ -56,12 +61,32 @@ services:
     depends_on:
       - backend
 
+  # One-off provisioning job: `docker compose -f docker-compose.prod.yml run --rm sftpgo_provision`.
+  # See docker-compose.yml for why this is a separate short-lived
+  # container instead of adding admin credentials to the backend service.
+  sftpgo_provision:
+    profiles: ["tools"]
+    build:
+      context: backend
+      dockerfile: Dockerfile
+    environment:
+      SFTPGO_URL: http://sftpgo:8080
+      SFTPGO_ADMIN_USER: ${SFTPGO_ADMIN_USER:?SFTPGO_ADMIN_USER is required}
+      SFTPGO_ADMIN_PASSWORD: ${SFTPGO_ADMIN_PASSWORD:?SFTPGO_ADMIN_PASSWORD is required}
+      SFTPGO_APP_USER: ${SFTPGO_APP_USER:-erp_app}
+      SFTPGO_APP_PASSWORD: ${SFTPGO_APP_PASSWORD:?SFTPGO_APP_PASSWORD is required}
+    command: [ "bin/rails", "sftpgo:provision" ]
+    depends_on:
+      - sftpgo
+
   sftpgo:
     image: drakkan/sftpgo:v2
     restart: unless-stopped
     environment:
       SFTPGO_DEFAULT_ADMIN_USERNAME: ${SFTPGO_ADMIN_USER:?SFTPGO_ADMIN_USER is required}
       SFTPGO_DEFAULT_ADMIN_PASSWORD: ${SFTPGO_ADMIN_PASSWORD:?SFTPGO_ADMIN_PASSWORD is required}
+      # See docker-compose.yml for why this second flag is required.
+      SFTPGO_DATA_PROVIDER__CREATE_DEFAULT_ADMIN: "true"
     ports:
       - "${BIND_ADDRESS:-127.0.0.1}:${SFTPGO_WEBADMIN_PORT:-8080}:8080"
       - "${BIND_ADDRESS:-127.0.0.1}:${SFTPGO_SFTP_PORT:-2022}:2022"
