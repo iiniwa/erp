@@ -31,6 +31,16 @@ class AddressTel < ApplicationRecord
   validate :only_one_emergency_contact_per_address, if: :is_emergency?
   validate :emergency_contact_requires_employee_address
 
+  # Validation alone isn't enough to make a swap safe: accepts_nested_attributes_for
+  # saves records in the order they were submitted (address_tels_attributes'
+  # order), not by at_sort, so if the *new* emergency contact happens to
+  # save before the old one is demoted, its INSERT/UPDATE would transiently
+  # collide with the still-`true` old row at the DB level
+  # (ActiveRecord::RecordNotUnique on the unique index), even though both
+  # records individually passed validation. Clearing any other row's flag
+  # immediately before this row's own save removes that order dependency.
+  before_save :demote_other_emergency_contacts, if: -> { is_emergency? && will_save_change_to_is_emergency? }
+
   before_destroy :prevent_invalid_employee_primary_removal
   after_destroy :promote_next_primary
 
@@ -107,10 +117,20 @@ class AddressTel < ApplicationRecord
     errors.add(:base, "緊急連絡先は1件までしか登録できません")
   end
 
+  # A sibling being _destroy'd this same request is no longer a real
+  # conflict even if its is_emergency attribute still reads true (nothing
+  # marks it false on destruction — it's simply not going to exist
+  # afterward).
   def demoted_in_pending_siblings?(persisted_tel)
     return false unless address
 
     pending_sibling = address.address_tels.find { |tel| tel.at_id == persisted_tel.at_id }
-    pending_sibling && !pending_sibling.is_emergency?
+    return false unless pending_sibling
+
+    pending_sibling.marked_for_destruction? || !pending_sibling.is_emergency?
+  end
+
+  def demote_other_emergency_contacts
+    self.class.where(address_id: address_id, is_emergency: true).where.not(at_id: at_id).update_all(is_emergency: false)
   end
 end
