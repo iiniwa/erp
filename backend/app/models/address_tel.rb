@@ -8,8 +8,7 @@ class AddressTel < ApplicationRecord
     main: 2,
     fax: 3,
     home: 4,
-    emergency: 5,
-    free: 6
+    free: 5
   }, validate: true
 
   validates :at_number, presence: true
@@ -18,7 +17,9 @@ class AddressTel < ApplicationRecord
   # in the address_tels migration) is what actually guarantees this under
   # concurrent writes; this validation exists to surface a normal validation
   # error instead of a raw ActiveRecord::RecordNotUnique in the common case.
-  validates :address_id, uniqueness: { scope: :at_label_type }, if: :emergency?
+  # is_emergency is independent of at_label_type (a mobile, home, or
+  # free-form number can all serve as the emergency contact).
+  validates :address_id, uniqueness: { scope: :is_emergency }, if: :is_emergency?
   validate :emergency_contact_requires_employee_address
 
   before_destroy :prevent_invalid_employee_primary_removal
@@ -76,9 +77,9 @@ class AddressTel < ApplicationRecord
   end
 
   def emergency_contact_requires_employee_address
-    return unless emergency?
+    return unless is_emergency?
     return if address&.address_user_code.present?
 
-    errors.add(:at_label_type, "は従業員本人のアドレスにのみ設定できます")
+    errors.add(:is_emergency, "は従業員本人のアドレスにのみ設定できます")
   end
 end

@@ -57,7 +57,7 @@ class Address < ApplicationRecord
   # would otherwise only surface as a raw ActiveRecord::RecordNotUnique at
   # the DB layer. Checking the in-memory collection here catches that case.
   def only_one_emergency_tel
-    emergency_tels = address_tels.reject(&:marked_for_destruction?).select(&:emergency?)
+    emergency_tels = address_tels.reject(&:marked_for_destruction?).select(&:is_emergency?)
     return if emergency_tels.size <= 1
 
     errors.add(:base, "緊急連絡先は1件までしか登録できません")

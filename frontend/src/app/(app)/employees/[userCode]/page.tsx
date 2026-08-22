@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { notFound } from "next/navigation";
 import { fetchEmployee } from "@/lib/api/employees";
+import { fetchEmployeeAddress } from "@/lib/api/employee-address";
 import { userTypeLabels } from "@/lib/validation/employee";
 import LinkButton from "@/components/ui/LinkButton";
 import Card from "@/components/ui/Card";
@@ -21,7 +22,10 @@ export default async function EmployeeDetailPage({
   params: Promise<{ userCode: string }>;
 }) {
   const { userCode } = await params;
-  const employee = await fetchEmployee(userCode);
+  const [employee, address] = await Promise.all([
+    fetchEmployee(userCode),
+    fetchEmployeeAddress(userCode),
+  ]);
   if (!employee) {
     notFound();
   }
@@ -53,6 +57,22 @@ export default async function EmployeeDetailPage({
           <Field label="システム登録日">{employee.user_entry_date ?? "未設定"}</Field>
           <Field label="ロック状態">{employee.user_is_locked ? "ロック中" : "ロックなし"}</Field>
         </dl>
+      </Card>
+      <Card className="mb-6">
+        <div className="mb-3 flex items-center justify-between">
+          <h2 className="font-medium text-brand-gray-900">アドレス帳情報</h2>
+          <LinkButton href={`/employees/${employee.user_code}/address`} variant="secondary">
+            編集
+          </LinkButton>
+        </div>
+        {address ? (
+          <dl className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <Field label="電話番号">{address.address_tels[0]?.at_number ?? "未登録"}</Field>
+            <Field label="メールアドレス">{address.address_emails[0]?.ae_email ?? "未登録"}</Field>
+          </dl>
+        ) : (
+          <p className="text-sm text-brand-gray-500">未登録です。</p>
+        )}
       </Card>
       <EmployeeActions userCode={employee.user_code} isRetired={employee.user_type === "retired"} />
     </div>

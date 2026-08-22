@@ -33,8 +33,14 @@ module Api
         end
       end
 
+      # Employee-linked addresses are read-only here (spec-following
+      # decision: the employee<->address_book linkage must not be
+      # changeable carelessly). Editing one goes through
+      # Api::V1::EmployeeAddressesController instead, reached from
+      # Employee Management, not the address book screen.
       def update
         authorize @address
+        return render_employee_linked_address_locked if @address.address_user_code.present?
 
         if @address.update(address_params)
           render json: { address: serialize_address(@address) }
@@ -46,8 +52,12 @@ module Api
       # Addresses are never soft-deleted for employees who retire (spec
       # section 5.2), but this action is for genuinely removing a business
       # contact entry; SoftDeletable's default_scope keeps it out of #index.
+      # Employee-linked addresses can't be deleted through here either —
+      # see #update.
       def destroy
         authorize @address
+        return render_employee_linked_address_locked if @address.address_user_code.present?
+
         @address.soft_delete!
         head :no_content
       end
@@ -59,11 +69,19 @@ module Api
         render json: { error: "not_found" }, status: :not_found unless @address
       end
 
+      def render_employee_linked_address_locked
+        render json: { error: "employee_linked_address_locked" }, status: :forbidden
+      end
+
+      # address_user_code is deliberately excluded: linking (or
+      # relinking) an address to an employee only ever happens via
+      # Api::V1::EmployeeAddressesController, never through a generic
+      # update here — see the class comment.
       def address_params
         params.permit(
-          :address_category_id, :address_name, :address_ruby, :address_user_code,
+          :address_category_id, :address_name, :address_ruby,
           :address_contact_name, :address_post, :address_residence, :address_memo,
-          address_tels_attributes: %i[id at_number at_label_type at_label_free at_sort _destroy],
+          address_tels_attributes: %i[id at_number at_label_type at_label_free at_sort is_emergency _destroy],
           address_emails_attributes: %i[id ae_email ae_label ae_sort _destroy]
         )
       end
@@ -91,7 +109,8 @@ module Api
           at_number: tel.at_number,
           at_label_type: tel.at_label_type,
           at_label_free: tel.at_label_free,
-          at_sort: tel.at_sort
+          at_sort: tel.at_sort,
+          is_emergency: tel.is_emergency
         }
       end
 

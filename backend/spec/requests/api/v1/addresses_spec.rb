@@ -102,39 +102,20 @@ RSpec.describe "Api::V1::Addresses", type: :request do
       expect(created.address_emails.count).to eq(1)
     end
 
-    it "rejects an employee address whose primary tel is not mobile" do
+    it "ignores address_user_code — linking to an employee only happens via Employee Management" do
       user = create(:user)
-      params = valid_params.merge(
-        address_user_code: user.user_code,
-        address_tels_attributes: [ { at_number: "0311112222", at_label_type: "main", at_sort: 1 } ]
-      )
-
-      post "/api/v1/addresses", params: params, headers: authenticated_headers(session_token), as: :json
-
-      expect(response).to have_http_status(:unprocessable_entity)
-    end
-
-    it "accepts an employee address whose primary tel is mobile" do
-      user = create(:user)
-      params = valid_params.merge(
-        address_user_code: user.user_code,
-        address_tels_attributes: [ { at_number: "09000000000", at_label_type: "mobile", at_sort: 1 } ]
-      )
+      params = valid_params.merge(address_user_code: user.user_code)
 
       post "/api/v1/addresses", params: params, headers: authenticated_headers(session_token), as: :json
 
       expect(response).to have_http_status(:created)
+      created = Address.find(json["address"]["address_id"])
+      expect(created.address_user_code).to be_nil
     end
 
-    it "rejects a second emergency contact on the same address" do
-      user = create(:user)
+    it "rejects an emergency-contact tel on a non-employee address" do
       params = valid_params.merge(
-        address_user_code: user.user_code,
-        address_tels_attributes: [
-          { at_number: "09000000000", at_label_type: "mobile", at_sort: 1 },
-          { at_number: "09011111111", at_label_type: "emergency", at_sort: 2 },
-          { at_number: "09022222222", at_label_type: "emergency", at_sort: 3 }
-        ]
+        address_tels_attributes: [ { at_number: "0311112222", at_label_type: "main", at_sort: 1, is_emergency: true } ]
       )
 
       post "/api/v1/addresses", params: params, headers: authenticated_headers(session_token), as: :json
@@ -174,18 +155,15 @@ RSpec.describe "Api::V1::Addresses", type: :request do
       expect(secondary.reload.ae_sort).to eq(1)
     end
 
-    it "rejects destroying an employee's primary mobile tel when a non-mobile tel would become primary" do
+    it "is forbidden for an employee-linked address — must be edited via Employee Management" do
       user = create(:user)
       address = create(:address, address_category: category, user: user)
-      mobile = create(:address_tel, address: address, at_label_type: :mobile, at_sort: 1)
-      create(:address_tel, address: address, at_label_type: :main, at_sort: 2)
 
-      patch "/api/v1/addresses/#{address.address_id}", params: {
-        address_tels_attributes: [ { id: mobile.at_id, _destroy: true } ]
-      }, headers: authenticated_headers(session_token), as: :json
+      patch "/api/v1/addresses/#{address.address_id}", params: { address_name: "勝手に変更" },
+        headers: authenticated_headers(session_token), as: :json
 
-      expect(response).to have_http_status(:unprocessable_entity)
-      expect(AddressTel.exists?(mobile.at_id)).to be true
+      expect(response).to have_http_status(:forbidden)
+      expect(address.reload.address_name).not_to eq("勝手に変更")
     end
   end
 
@@ -198,6 +176,16 @@ RSpec.describe "Api::V1::Addresses", type: :request do
       expect(response).to have_http_status(:no_content)
       expect(Address.exists?(address.address_id)).to be false
       expect(Address.with_deleted.exists?(address.address_id)).to be true
+    end
+
+    it "is forbidden for an employee-linked address" do
+      user = create(:user)
+      address = create(:address, address_category: category, user: user)
+
+      delete "/api/v1/addresses/#{address.address_id}", headers: authenticated_headers(session_token)
+
+      expect(response).to have_http_status(:forbidden)
+      expect(Address.exists?(address.address_id)).to be true
     end
   end
 

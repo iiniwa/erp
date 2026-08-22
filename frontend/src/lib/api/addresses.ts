@@ -7,6 +7,7 @@ export type AddressTel = {
   at_label_type: string;
   at_label_free: string | null;
   at_sort: number;
+  is_emergency: boolean;
 };
 
 export type AddressEmail = {

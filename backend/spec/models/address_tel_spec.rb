@@ -5,9 +5,9 @@ RSpec.describe AddressTel do
     it "rejects a second emergency contact at the model validation level" do
       user = create(:user)
       address = create(:address, user: user)
-      create(:address_tel, address: address, at_label_type: :emergency, at_sort: 2)
+      create(:address_tel, address: address, is_emergency: true, at_sort: 2)
 
-      duplicate = build(:address_tel, address: address, at_label_type: :emergency, at_sort: 3)
+      duplicate = build(:address_tel, address: address, is_emergency: true, at_sort: 3)
 
       expect(duplicate).not_to be_valid
     end
@@ -15,18 +15,26 @@ RSpec.describe AddressTel do
     it "also rejects a second emergency contact at the database level" do
       user = create(:user)
       address = create(:address, user: user)
-      create(:address_tel, address: address, at_label_type: :emergency, at_sort: 2)
+      create(:address_tel, address: address, is_emergency: true, at_sort: 2)
 
-      duplicate = build(:address_tel, address: address, at_label_type: :emergency, at_sort: 3)
+      duplicate = build(:address_tel, address: address, is_emergency: true, at_sort: 3)
 
       expect { duplicate.save!(validate: false) }.to raise_error(ActiveRecord::RecordNotUnique)
     end
 
     it "rejects an emergency contact on an address without an associated user" do
       address = create(:address, user: nil)
-      tel = build(:address_tel, address: address, at_label_type: :emergency)
+      tel = build(:address_tel, address: address, is_emergency: true)
 
       expect(tel).not_to be_valid
+    end
+
+    it "is independent of at_label_type — any label can be the emergency contact" do
+      user = create(:user)
+      address = create(:address, user: user)
+      tel = build(:address_tel, address: address, at_label_type: :home, is_emergency: true, at_sort: 2)
+
+      expect(tel).to be_valid
     end
 
     it "allows multiple non-emergency labels on the same address" do
