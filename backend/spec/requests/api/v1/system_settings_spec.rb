@@ -104,6 +104,22 @@ RSpec.describe "Api::V1::SystemSettings", type: :request do
       expect(old_file.reload.soft_deleted?).to be true
     end
 
+    it "still returns success when the already-saved update's stale-file cleanup fails" do
+      old_file = create(:stored_file, file_path: "general/old-logo.png")
+      SystemSetting.instance.update!(system_logo_file: old_file)
+      allow(FileStorageService).to receive(:upload).and_return("general/new-logo.png")
+      allow(FileStorageService).to receive(:delete).and_raise(FileStorageService::Error, "boom")
+      upload = fixture_file_upload(Rails.root.join("spec/fixtures/files/logo.png"), "image/png")
+
+      patch "/api/v1/system_setting", params: { system_logo_file: upload },
+        headers: authenticated_headers(session_token)
+
+      expect(response).to have_http_status(:ok)
+      setting = SystemSetting.instance
+      expect(setting.system_logo_file.file_path).to eq("general/new-logo.png")
+      expect(old_file.reload.soft_deleted?).to be false
+    end
+
     it "keeps the previous file and discards the new upload when the settings save fails" do
       old_file = create(:stored_file, file_path: "general/old-logo.png")
       SystemSetting.instance.update!(system_logo_file: old_file)

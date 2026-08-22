@@ -30,8 +30,13 @@ module Api
         @system_setting.updated_by = current_user.user_code
 
         if @system_setting.save
-          pending_uploads.each_value { |upload| retire_old_file(upload[:old_file]) }
+          # The settings row is already committed at this point, so a
+          # stale-file cleanup failure here must not turn into an error
+          # response: the update itself succeeded, and the client
+          # shouldn't be told to retry (which would just create another
+          # orphaned upload). Best-effort only; logged for manual cleanup.
           render json: { system_setting: serialize(@system_setting) }
+          pending_uploads.each_value { |upload| retire_old_file_best_effort(upload[:old_file]) }
         else
           pending_uploads.each_value { |upload| discard_new_file(upload) }
           render json: { errors: @system_setting.errors.full_messages }, status: :unprocessable_entity
@@ -101,11 +106,15 @@ module Api
         { stored_file: stored_file, old_file: old_file }
       end
 
-      def retire_old_file(old_file)
+      def retire_old_file_best_effort(old_file)
         return unless old_file
 
         FileStorageService.delete(old_file.file_path)
         old_file.soft_delete!
+      rescue FileStorageService::Error => e
+        Rails.logger.error(
+          "SystemSettingsController: failed to delete stale file #{old_file.file_path.inspect}: #{e.message}"
+        )
       end
 
       def discard_new_file(upload)
