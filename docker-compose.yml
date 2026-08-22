@@ -34,6 +34,11 @@ services:
       FRONTEND_ORIGIN: "http://localhost:${FRONTEND_PORT:-3000}"
       INTERNAL_API_SECRET: "${INTERNAL_API_SECRET:?Set INTERNAL_API_SECRET in .env (run: make setup)}"
       RAILS_MASTER_KEY: "${RAILS_MASTER_KEY:-}"
+      SFTPGO_URL: http://sftpgo:8080
+      SFTPGO_ADMIN_USER: "${SFTPGO_ADMIN_USER:?Set SFTPGO_ADMIN_USER in .env (run: make setup)}"
+      SFTPGO_ADMIN_PASSWORD: "${SFTPGO_ADMIN_PASSWORD:?Set SFTPGO_ADMIN_PASSWORD in .env (run: make setup)}"
+      SFTPGO_APP_USER: "${SFTPGO_APP_USER:-erp_app}"
+      SFTPGO_APP_PASSWORD: "${SFTPGO_APP_PASSWORD:?Set SFTPGO_APP_PASSWORD in .env (run: make setup)}"
     ports:
       - "${BIND_ADDRESS:-127.0.0.1}:${BACKEND_PORT:-3001}:3000"
     volumes:
@@ -42,6 +47,8 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      sftpgo:
+        condition: service_started
 
   frontend:
     build:
@@ -69,6 +76,11 @@ services:
     environment:
       SFTPGO_DEFAULT_ADMIN_USERNAME: "${SFTPGO_ADMIN_USER:?Set SFTPGO_ADMIN_USER in .env (run: make setup)}"
       SFTPGO_DEFAULT_ADMIN_PASSWORD: "${SFTPGO_ADMIN_PASSWORD:?Set SFTPGO_ADMIN_PASSWORD in .env (run: make setup)}"
+      # SFTPGO_DEFAULT_ADMIN_USERNAME/PASSWORD alone are not sufficient;
+      # SFTPGo only actually creates that admin on first boot if this flag
+      # is also set (double underscore maps to the nested
+      # data_provider.create_default_admin config key).
+      SFTPGO_DATA_PROVIDER__CREATE_DEFAULT_ADMIN: "true"
     ports:
       - "${BIND_ADDRESS:-127.0.0.1}:${SFTPGO_WEBADMIN_PORT:-8080}:8080"
       - "${BIND_ADDRESS:-127.0.0.1}:${SFTPGO_SFTP_PORT:-2022}:2022"

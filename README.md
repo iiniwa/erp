@@ -18,7 +18,9 @@
 - フロントエンド: Next.js + Tailwind CSS
 - バックエンド: Ruby on Rails（APIモード）
 - DB: MariaDB
-- ファイルストレージ: SFTPGo（S3互換API）
+- ファイルストレージ: SFTPGo（REST API経由。SFTPGo自体はS3互換サーバーではないため、
+  `+s3`ビルドフラグが示す「バックエンドとしてS3を使える」機能ではなく、SFTPGo独自の
+  ユーザー向けHTTP APIを使用する。詳細は`backend/app/services/file_storage_service.rb`）
 
 ## 初回セットアップ
 
@@ -44,6 +46,14 @@ make build dev    # 開発環境イメージをビルド
 
 ```sh
 docker compose -f docker-compose.yml up
+```
+
+初回のみ、システム設定画面（ロゴ・印影等）のファイルアップロード先となる
+SFTPGoの専用アカウントを作成する（`.env`の`SFTPGO_APP_USER`/`SFTPGO_APP_PASSWORD`
+を使用。何度実行しても安全）:
+
+```sh
+docker compose exec backend bin/rails sftpgo:provision
 ```
 
 - フロントエンド: http://localhost:3000

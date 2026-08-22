@@ -12,11 +12,15 @@ type BackendFetchInit = Omit<RequestInit, "headers"> & {
 
 export function backendFetch(path: string, init: BackendFetchInit = {}) {
   const { sessionToken, headers, ...rest } = init;
+  // FormData bodies (file uploads) need fetch to compute their own
+  // multipart Content-Type with boundary; setting it ourselves here would
+  // produce a boundary-less header and a request Rails can't parse.
+  const isFormData = rest.body instanceof FormData;
 
   return fetch(`${BACKEND_INTERNAL_URL}${path}`, {
     ...rest,
     headers: {
-      "Content-Type": "application/json",
+      ...(isFormData ? {} : { "Content-Type": "application/json" }),
       "X-Internal-Api-Secret": INTERNAL_API_SECRET,
       ...(sessionToken ? { Authorization: `Bearer ${sessionToken}` } : {}),
       ...headers,

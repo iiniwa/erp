@@ -1,7 +1,6 @@
 import MenuCard from "@/components/ui/MenuCard";
 import { getCurrentUser } from "@/lib/session";
 
-// More cards are added here as each area ships (#7 システム設定).
 export default async function MenuPage() {
   const user = await getCurrentUser();
   // Purely a UX nicety (hide cards the user can't do anything with,
@@ -39,6 +38,13 @@ export default async function MenuPage() {
             href="/settings/permissions"
             title="権限管理"
             description="役割ごとの機能アクセス権限の設定"
+          />
+        )}
+        {isSystemAdmin && (
+          <MenuCard
+            href="/settings/system"
+            title="システム・自社情報"
+            description="会社情報・振込先・ロゴ等の設定"
           />
         )}
       </div>

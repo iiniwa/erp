@@ -28,6 +28,10 @@ Rails.application.routes.draw do
 
       resources :permission_masters, only: %i[index create update destroy]
       resources :role_permissions, only: %i[index update]
+
+      resource :system_setting, only: %i[show update], controller: "system_settings" do
+        get "files/:field", action: :file, on: :member, as: :file
+      end
     end
   end
 end
