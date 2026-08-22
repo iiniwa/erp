@@ -7,6 +7,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import {
   bankAccountTypeOptions,
   systemSettingSchema,
+  ALLOWED_IMAGE_TYPES,
   FILE_FIELDS,
   FILE_FIELD_LABELS,
   type SystemSettingFormValues,
@@ -58,7 +59,10 @@ export default function SystemSettingsForm({ setting }: { setting: SystemSetting
   async function onSubmit(values: SystemSettingFormValues) {
     const formData = new FormData();
     Object.entries(values).forEach(([key, value]) => {
-      if (value) formData.append(key, value);
+      // Send empty strings too (not just truthy values): a blank field is
+      // how the user clears a previously-set setting, and PATCH only
+      // updates the keys it actually receives.
+      formData.append(key, value ?? "");
     });
     FILE_FIELDS.forEach((field) => {
       const file = selectedFiles[field];
@@ -203,8 +207,11 @@ export default function SystemSettingsForm({ setting }: { setting: SystemSetting
                   {currentFile && (
                     <p className="mb-1 text-sm text-brand-gray-500">
                       現在のファイル:{" "}
+                      {/* The BFF route (not currentFile.url, which is the
+                          unreachable-from-the-browser Rails path) is what
+                          actually streams this back through session auth. */}
                       <a
-                        href={currentFile.url}
+                        href={`/api/system-setting/files/${field}`}
                         target="_blank"
                         rel="noreferrer"
                         className="text-brand-green-700 hover:underline"
@@ -216,9 +223,17 @@ export default function SystemSettingsForm({ setting }: { setting: SystemSetting
                   <input
                     id={field}
                     type="file"
-                    accept="image/*"
+                    accept={ALLOWED_IMAGE_TYPES.join(",")}
                     onChange={(event) => {
                       const file = event.target.files?.[0];
+                      if (file && !ALLOWED_IMAGE_TYPES.includes(file.type)) {
+                        showToast(
+                          "PNG・JPEG・GIF・WEBP形式のファイルを選択してください。",
+                          "error",
+                        );
+                        event.target.value = "";
+                        return;
+                      }
                       setSelectedFiles((prev) => ({ ...prev, [field]: file }));
                     }}
                     className="block w-full text-sm text-brand-gray-700 file:mr-3 file:min-h-11 file:rounded-md file:border-0 file:bg-brand-gray-100 file:px-3 file:py-2 file:text-brand-gray-700 hover:file:bg-brand-gray-200"

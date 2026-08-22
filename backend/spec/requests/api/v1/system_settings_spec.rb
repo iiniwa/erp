@@ -103,6 +103,34 @@ RSpec.describe "Api::V1::SystemSettings", type: :request do
       expect(FileStorageService).to have_received(:delete).with("general/old-logo.png")
       expect(old_file.reload.soft_deleted?).to be true
     end
+
+    it "keeps the previous file and discards the new upload when the settings save fails" do
+      old_file = create(:stored_file, file_path: "general/old-logo.png")
+      SystemSetting.instance.update!(system_logo_file: old_file)
+      allow(FileStorageService).to receive(:upload).and_return("general/new-logo.png")
+      allow(FileStorageService).to receive(:delete)
+      upload = fixture_file_upload(Rails.root.join("spec/fixtures/files/logo.png"), "image/png")
+
+      patch "/api/v1/system_setting",
+        params: { system_logo_file: upload, bank_account_type: "not_a_real_type" },
+        headers: authenticated_headers(session_token)
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(SystemSetting.instance.system_logo_file).to eq(old_file)
+      expect(old_file.reload.soft_deleted?).to be false
+      expect(FileStorageService).to have_received(:delete).with("general/new-logo.png")
+      expect(StoredFile.exists?(file_path: "general/new-logo.png")).to be false
+    end
+
+    it "rejects an SVG upload" do
+      upload = fixture_file_upload(Rails.root.join("spec/fixtures/files/logo.png"), "image/svg+xml")
+
+      patch "/api/v1/system_setting", params: { system_logo_file: upload },
+        headers: authenticated_headers(session_token)
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(SystemSetting.instance.system_logo_file).to be_nil
+    end
   end
 
   describe "GET /api/v1/system_setting/files/:field" do

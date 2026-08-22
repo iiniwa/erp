@@ -14,6 +14,17 @@ class FileStorageService
 
   FOLDER_BY_TYPE = { "general" => "general", "archive" => "archive" }.freeze
 
+  # Raster formats only — no image/svg+xml. An SVG is XML that can embed
+  # <script>, so serving one back with Content-Disposition: inline (see
+  # Api::V1::SystemSettingsController#file) would execute attacker script
+  # in this app's origin if a malicious file ever got uploaded here.
+  ALLOWED_CONTENT_TYPES = %w[image/png image/jpeg image/gif image/webp].freeze
+
+  # Logos/favicons/seals only; generous enough for a real logo file
+  # without allowing something absurd. Enforced here (not just the
+  # controller) since #upload reads the whole body into memory.
+  MAX_UPLOAD_SIZE = 5.megabytes
+
   def self.upload(...)
     new.upload(...)
   end
@@ -29,10 +40,17 @@ class FileStorageService
   # Returns the object key (e.g. "general/<uuid>-<filename>") to store as
   # StoredFile#file_path.
   def upload(file_type:, filename:, io:, content_type:)
+    unless ALLOWED_CONTENT_TYPES.include?(content_type)
+      raise Error, "content_type #{content_type.inspect} is not allowed"
+    end
+    if io.respond_to?(:size) && io.size > MAX_UPLOAD_SIZE
+      raise Error, "file exceeds the #{MAX_UPLOAD_SIZE} byte upload limit"
+    end
+
     key = object_key(file_type, filename)
     request = Net::HTTP::Post.new(upload_uri(key))
     request["Authorization"] = "Bearer #{user_token}"
-    request["Content-Type"] = content_type.presence || "application/octet-stream"
+    request["Content-Type"] = content_type
     request.body = io.read
 
     response = http.request(request)
@@ -82,7 +100,10 @@ class FileStorageService
   end
 
   def http
-    @http ||= Net::HTTP.new(URI(base_url).host, URI(base_url).port)
+    @http ||= begin
+      uri = URI(base_url)
+      Net::HTTP.new(uri.host, uri.port).tap { |client| client.use_ssl = uri.scheme == "https" }
+    end
   end
 
   # A fresh token per instance (this service is instantiated per call, not

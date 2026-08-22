@@ -47,3 +47,10 @@ export const FILE_FIELD_LABELS: Record<string, string> = {
 };
 
 export const FILE_FIELDS = Object.keys(FILE_FIELD_LABELS) as (keyof typeof FILE_FIELD_LABELS)[];
+
+// Matches FileStorageService::ALLOWED_CONTENT_TYPES on the backend, which
+// is the real enforcement point; this only gives the user an earlier,
+// friendlier rejection than a round-trip 422. Deliberately excludes
+// image/svg+xml: an SVG is XML that can embed <script>, and the file gets
+// served back with Content-Disposition: inline.
+export const ALLOWED_IMAGE_TYPES = ["image/png", "image/jpeg", "image/gif", "image/webp"];

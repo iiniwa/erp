@@ -35,8 +35,6 @@ services:
       INTERNAL_API_SECRET: "${INTERNAL_API_SECRET:?Set INTERNAL_API_SECRET in .env (run: make setup)}"
       RAILS_MASTER_KEY: "${RAILS_MASTER_KEY:-}"
       SFTPGO_URL: http://sftpgo:8080
-      SFTPGO_ADMIN_USER: "${SFTPGO_ADMIN_USER:?Set SFTPGO_ADMIN_USER in .env (run: make setup)}"
-      SFTPGO_ADMIN_PASSWORD: "${SFTPGO_ADMIN_PASSWORD:?Set SFTPGO_ADMIN_PASSWORD in .env (run: make setup)}"
       SFTPGO_APP_USER: "${SFTPGO_APP_USER:-erp_app}"
       SFTPGO_APP_PASSWORD: "${SFTPGO_APP_PASSWORD:?Set SFTPGO_APP_PASSWORD in .env (run: make setup)}"
     ports:
@@ -69,6 +67,30 @@ services:
       - frontend_next:/app/.next
     depends_on:
       - backend
+
+  # One-off provisioning job: `docker compose run --rm sftpgo_provision`.
+  # Not part of `docker compose up` (profiles: [tools]) and never runs
+  # long-lived, so the SFTPGo admin credentials live only in this
+  # short-lived container's environment, not in the always-running
+  # backend service (which only needs the far more limited SFTPGO_APP_*
+  # account it uploads through).
+  sftpgo_provision:
+    profiles: ["tools"]
+    build:
+      context: backend
+      dockerfile: Dockerfile.dev
+    environment:
+      SFTPGO_URL: http://sftpgo:8080
+      SFTPGO_ADMIN_USER: "${SFTPGO_ADMIN_USER:?Set SFTPGO_ADMIN_USER in .env (run: make setup)}"
+      SFTPGO_ADMIN_PASSWORD: "${SFTPGO_ADMIN_PASSWORD:?Set SFTPGO_ADMIN_PASSWORD in .env (run: make setup)}"
+      SFTPGO_APP_USER: "${SFTPGO_APP_USER:-erp_app}"
+      SFTPGO_APP_PASSWORD: "${SFTPGO_APP_PASSWORD:?Set SFTPGO_APP_PASSWORD in .env (run: make setup)}"
+    command: [ "bin/rails", "sftpgo:provision" ]
+    volumes:
+      - ./backend:/rails
+      - backend_bundle:/usr/local/bundle
+    depends_on:
+      - sftpgo
 
   sftpgo:
     image: drakkan/sftpgo:v2

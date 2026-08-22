@@ -50,10 +50,11 @@ docker compose -f docker-compose.yml up
 
 初回のみ、システム設定画面（ロゴ・印影等）のファイルアップロード先となる
 SFTPGoの専用アカウントを作成する（`.env`の`SFTPGO_APP_USER`/`SFTPGO_APP_PASSWORD`
-を使用。何度実行しても安全）:
+を使用。何度実行しても安全）。SFTPGo管理者の認証情報はこのprovisioning用の
+使い捨てコンテナにのみ渡し、常駐する`backend`サービスには含めていない:
 
 ```sh
-docker compose exec backend bin/rails sftpgo:provision
+docker compose run --rm sftpgo_provision
 ```
 
 - フロントエンド: http://localhost:3000
@@ -65,6 +66,12 @@ docker compose exec backend bin/rails sftpgo:provision
 ```sh
 make build prod
 docker compose -f docker-compose.prod.yml up
+```
+
+こちらも初回のみSFTPGoのprovisioningが必要:
+
+```sh
+docker compose -f docker-compose.prod.yml run --rm sftpgo_provision
 ```
 
 ## よく使うコマンド

@@ -37,8 +37,6 @@ services:
       # an externally managed Redis instance (required for Action Cable).
       REDIS_URL: ${REDIS_URL:?REDIS_URL is required (see docker-compose.prod.yml)}
       SFTPGO_URL: http://sftpgo:8080
-      SFTPGO_ADMIN_USER: ${SFTPGO_ADMIN_USER:?SFTPGO_ADMIN_USER is required}
-      SFTPGO_ADMIN_PASSWORD: ${SFTPGO_ADMIN_PASSWORD:?SFTPGO_ADMIN_PASSWORD is required}
       SFTPGO_APP_USER: ${SFTPGO_APP_USER:-erp_app}
       SFTPGO_APP_PASSWORD: ${SFTPGO_APP_PASSWORD:?SFTPGO_APP_PASSWORD is required}
     ports:
@@ -62,6 +60,24 @@ services:
       - "${BIND_ADDRESS:-127.0.0.1}:${FRONTEND_PORT:-3000}:3000"
     depends_on:
       - backend
+
+  # One-off provisioning job: `docker compose -f docker-compose.prod.yml run --rm sftpgo_provision`.
+  # See docker-compose.yml for why this is a separate short-lived
+  # container instead of adding admin credentials to the backend service.
+  sftpgo_provision:
+    profiles: ["tools"]
+    build:
+      context: backend
+      dockerfile: Dockerfile
+    environment:
+      SFTPGO_URL: http://sftpgo:8080
+      SFTPGO_ADMIN_USER: ${SFTPGO_ADMIN_USER:?SFTPGO_ADMIN_USER is required}
+      SFTPGO_ADMIN_PASSWORD: ${SFTPGO_ADMIN_PASSWORD:?SFTPGO_ADMIN_PASSWORD is required}
+      SFTPGO_APP_USER: ${SFTPGO_APP_USER:-erp_app}
+      SFTPGO_APP_PASSWORD: ${SFTPGO_APP_PASSWORD:?SFTPGO_APP_PASSWORD is required}
+    command: [ "bin/rails", "sftpgo:provision" ]
+    depends_on:
+      - sftpgo
 
   sftpgo:
     image: drakkan/sftpgo:v2
