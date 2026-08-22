@@ -7,7 +7,7 @@ RSpec.describe "Api::V1::Users", type: :request do
     raw_token
   end
 
-  before { grant_permission!(:general, "user_manage") }
+  before { grant_permission!(admin, "user_manage") }
 
   describe "GET /api/v1/users" do
     it "lists users, excluding soft-deleted ones" do
@@ -164,7 +164,6 @@ RSpec.describe "Api::V1::Users", type: :request do
     end
 
     it "refuses to delete the fixed system administrator, even by themselves" do
-      grant_permission!(:system_admin, "user_manage")
       sysadmin = create(:user, user_type: :system_admin, user_must_change_password: false)
       _session, sysadmin_token = Session.issue_for(user: sysadmin, mode: :normal)
 

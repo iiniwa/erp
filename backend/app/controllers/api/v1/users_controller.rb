@@ -98,14 +98,14 @@ module Api
 
       def create_params
         params.permit(
-          :user_id, :user_type, :user_familyname, :user_firstname,
+          :user_id, :user_type, :role_id, :user_familyname, :user_firstname,
           :user_familyname_ruby, :user_firstname_ruby, :user_join_date
         )
       end
 
       def update_params
         params.permit(
-          :user_id, :user_familyname, :user_firstname,
+          :user_id, :role_id, :user_familyname, :user_firstname,
           :user_familyname_ruby, :user_firstname_ruby, :user_join_date
         )
       end
@@ -121,6 +121,8 @@ module Api
           user_code: user.user_code,
           user_id: user.user_id,
           user_type: user.user_type,
+          role_id: user.role_id,
+          role_name: user.permission_role&.role_name,
           user_familyname: user.user_familyname,
           user_firstname: user.user_firstname,
           user_familyname_ruby: user.user_familyname_ruby,

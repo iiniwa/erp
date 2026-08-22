@@ -18,6 +18,8 @@ export const systemSettingSchema = z.object({
   company_post: optionalString,
   company_address: optionalString,
   company_tel: optionalString,
+  company_fax: optionalString,
+  company_toll_free: optionalString,
   company_email: z
     .union([z.literal(""), z.email("正しいメールアドレスを入力してください")])
     .optional(),

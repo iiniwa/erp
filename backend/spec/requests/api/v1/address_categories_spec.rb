@@ -7,7 +7,7 @@ RSpec.describe "Api::V1::AddressCategories", type: :request do
     raw_token
   end
 
-  before { grant_permission!(:general, "address_book") }
+  before { grant_permission!(admin, "address_book") }
 
   describe "GET /api/v1/address_categories" do
     it "lists categories ordered by ac_sort" do

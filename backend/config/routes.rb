@@ -28,6 +28,7 @@ Rails.application.routes.draw do
       resources :address_categories, only: %i[index create]
 
       resources :permission_masters, only: %i[index create update destroy]
+      resources :permission_roles, only: %i[index create update destroy]
       resources :role_permissions, only: %i[index update]
 
       resource :system_setting, only: %i[show update], controller: "system_settings" do

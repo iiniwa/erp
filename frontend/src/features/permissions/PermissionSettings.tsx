@@ -1,15 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import type { PermissionMaster, RolePermission } from "@/lib/api/permissions";
-import { userTypeLabels } from "@/lib/validation/employee";
+import type { PermissionMaster, PermissionRole, RolePermission } from "@/lib/api/permissions";
 import { useToast } from "@/components/ui/ToastProvider";
 import Button from "@/components/ui/Button";
 import Card from "@/components/ui/Card";
-
-// Matches RolePermission.rp_user_types' declaration order on the backend
-// (system_admin, manager, clerical, general, part_time, retired).
-const USER_TYPE_ORDER = ["system_admin", "manager", "clerical", "general", "part_time", "retired"];
 
 type FlagField = "rp_can_view" | "rp_can_create" | "rp_can_update" | "rp_can_delete";
 const FLAG_FIELDS: { field: FlagField; label: string }[] = [
@@ -21,17 +16,35 @@ const FLAG_FIELDS: { field: FlagField; label: string }[] = [
 
 type Props = {
   permissionMasters: PermissionMaster[];
+  permissionRoles: PermissionRole[];
   rolePermissions: RolePermission[];
 };
 
-export default function PermissionSettings({ permissionMasters, rolePermissions }: Props) {
+export default function PermissionSettings({
+  permissionMasters,
+  permissionRoles,
+  rolePermissions,
+}: Props) {
   const { showToast } = useToast();
   const [masters, setMasters] = useState(permissionMasters);
+  const [roles, setRoles] = useState(permissionRoles);
   const [rows, setRows] = useState(rolePermissions);
   const [savingId, setSavingId] = useState<number | null>(null);
   const [newCode, setNewCode] = useState("");
   const [newName, setNewName] = useState("");
   const [addingFeature, setAddingFeature] = useState(false);
+  const [newRoleName, setNewRoleName] = useState("");
+  const [addingRole, setAddingRole] = useState(false);
+
+  async function refetchRolePermissions() {
+    const response = await fetch("/api/role-permissions");
+    if (!response.ok) {
+      showToast("権限一覧の再取得に失敗しました。ページを再読み込みしてください。", "error");
+      return;
+    }
+    const body = await response.json();
+    setRows(body.role_permissions);
+  }
 
   async function toggle(cell: RolePermission, field: FlagField) {
     setSavingId(cell.rp_id);
@@ -82,16 +95,7 @@ export default function PermissionSettings({ permissionMasters, rolePermissions 
       // auto-created role_permissions) forever without this. Refetching
       // directly is simpler than trying to predict the created rows'
       // shape here.
-      const rolePermissionsResponse = await fetch("/api/role-permissions");
-      if (!rolePermissionsResponse.ok) {
-        showToast(
-          "機能は追加されましたが、権限一覧の再取得に失敗しました。ページを再読み込みしてください。",
-          "error",
-        );
-        return;
-      }
-      const rolePermissionsBody = await rolePermissionsResponse.json();
-      setRows(rolePermissionsBody.role_permissions);
+      await refetchRolePermissions();
     } catch {
       showToast("通信に失敗しました。ネットワーク接続を確認してください。", "error");
     } finally {
@@ -113,8 +117,86 @@ export default function PermissionSettings({ permissionMasters, rolePermissions 
     }
   }
 
+  async function handleAddRole() {
+    if (!newRoleName.trim()) return;
+    setAddingRole(true);
+    try {
+      const response = await fetch("/api/permission-roles", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ role_name: newRoleName.trim(), role_sort: roles.length + 1 }),
+      });
+      const body = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        showToast(body.errors?.join("、") ?? "役割の追加に失敗しました。", "error");
+        return;
+      }
+      setRoles((prev) => [...prev, body.permission_role]);
+      setNewRoleName("");
+
+      // Same reasoning as handleAddFeature: a new role's auto-created
+      // role_permissions rows (one per existing feature) aren't in `rows`
+      // yet, so refetch rather than guess their shape.
+      await refetchRolePermissions();
+    } catch {
+      showToast("通信に失敗しました。ネットワーク接続を確認してください。", "error");
+    } finally {
+      setAddingRole(false);
+    }
+  }
+
+  async function handleDeleteRole(roleId: number) {
+    try {
+      const response = await fetch(`/api/permission-roles/${roleId}`, { method: "DELETE" });
+      if (!response.ok) {
+        showToast("役割の削除に失敗しました。", "error");
+        return;
+      }
+      setRoles((prev) => prev.filter((role) => role.role_id !== roleId));
+      setRows((prev) => prev.filter((row) => row.role_id !== roleId));
+    } catch {
+      showToast("通信に失敗しました。ネットワーク接続を確認してください。", "error");
+    }
+  }
+
   return (
     <div className="flex flex-col gap-6">
+      <Card>
+        <h2 className="mb-3 font-medium text-brand-gray-900">役割（権限レベル）の管理</h2>
+        <p className="mb-3 text-sm text-brand-gray-500">
+          システム管理者は常に全機能へアクセスできます。それ以外の従業員には、ここで作成した役割を割り当てて権限を管理します。
+        </p>
+        <div className="mb-4 flex flex-wrap gap-2">
+          <input
+            type="text"
+            value={newRoleName}
+            onChange={(event) => setNewRoleName(event.target.value)}
+            placeholder="役割名（例: 一般スタッフ）"
+            className="min-h-11 rounded-md border border-brand-gray-300 px-3 py-2 text-sm focus:border-brand-green-500 focus:outline-none focus:ring-1 focus:ring-brand-green-500"
+          />
+          <Button type="button" variant="secondary" disabled={addingRole} onClick={handleAddRole}>
+            役割を追加
+          </Button>
+        </div>
+        <ul className="flex flex-wrap gap-2">
+          {roles.map((role) => (
+            <li
+              key={role.role_id}
+              className="flex items-center gap-2 rounded-md border border-brand-gray-300 px-3 py-1 text-sm"
+            >
+              {role.role_name}
+              <button
+                type="button"
+                className="text-red-600 hover:underline"
+                onClick={() => handleDeleteRole(role.role_id)}
+              >
+                削除
+              </button>
+            </li>
+          ))}
+        </ul>
+      </Card>
+
       <Card>
         <h2 className="mb-3 font-medium text-brand-gray-900">機能マスタの追加</h2>
         <div className="flex flex-wrap gap-2">
@@ -149,12 +231,12 @@ export default function PermissionSettings({ permissionMasters, rolePermissions 
             <thead>
               <tr>
                 <th className="px-3 py-2 text-left font-semibold text-brand-gray-700">機能</th>
-                {USER_TYPE_ORDER.map((userType) => (
+                {roles.map((role) => (
                   <th
-                    key={userType}
+                    key={role.role_id}
                     className="px-3 py-2 text-center font-semibold text-brand-gray-700"
                   >
-                    {userTypeLabels[userType] ?? userType}
+                    {role.role_name}
                   </th>
                 ))}
                 <th className="px-3 py-2" />
@@ -164,19 +246,22 @@ export default function PermissionSettings({ permissionMasters, rolePermissions 
               {masters.map((pm) => (
                 <tr key={pm.pm_id}>
                   <td className="px-3 py-2 font-medium text-brand-gray-900">{pm.pm_name}</td>
-                  {USER_TYPE_ORDER.map((userType) => {
+                  {roles.map((role) => {
                     const cell = rows.find(
-                      (row) => row.pm_id === pm.pm_id && row.rp_user_type === userType,
+                      (row) => row.pm_id === pm.pm_id && row.role_id === role.role_id,
                     );
                     if (!cell) {
                       return (
-                        <td key={userType} className="px-3 py-2 text-center text-brand-gray-400">
+                        <td
+                          key={role.role_id}
+                          className="px-3 py-2 text-center text-brand-gray-400"
+                        >
                           -
                         </td>
                       );
                     }
                     return (
-                      <td key={userType} className="px-3 py-2">
+                      <td key={role.role_id} className="px-3 py-2">
                         <div className="flex flex-col items-center gap-1 text-xs text-brand-gray-700">
                           {FLAG_FIELDS.map(({ field, label }) => (
                             <label key={field} className="flex items-center gap-1">

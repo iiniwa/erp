@@ -8,7 +8,7 @@ RSpec.describe "Api::V1::Addresses", type: :request do
   end
   let(:category) { create(:address_category) }
 
-  before { grant_permission!(:general, "address_book") }
+  before { grant_permission!(admin, "address_book") }
 
   describe "GET /api/v1/addresses" do
     it "lists addresses with their tels/emails joined, excluding soft-deleted ones" do

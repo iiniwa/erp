@@ -67,31 +67,29 @@ rescue ActiveRecord::RecordNotUnique
   retry
 end
 
-# Feature master + default role permissions (spec sections 4, 5.7/5.8).
-# PermissionMaster#create_role_permissions_for_every_user_type backfills a
-# row per user_type (defaulting to no access) whenever a feature is added,
-# so this only needs to raise the defaults that make the app usable out of
-# the box: system_admin gets full access to every feature (so the settings
-# screen that edits this table is never self-lockable), other active
-# roles start view-only, and retired employees (spec section 4: they can
-# still log in) are left at no access until an admin decides otherwise.
+# Feature master + a starter permission role (spec sections 4, 5.7/5.8).
+# system_admin (the fixed employment classification) always has full
+# access regardless of role assignment (see ApplicationPolicy), so it
+# needs no role_permissions rows of its own. Everyone else's access is
+# governed entirely by whichever PermissionRole an admin assigns them to
+# from the employee screen; a single view-only starter role is seeded here
+# so the app is usable out of the box, but roles beyond this are freely
+# created/edited/deleted from the settings screen.
 begin
   {
     "user_manage" => "従業員管理",
     "address_book" => "アドレス帳"
   }.each_with_index do |(code, name), index|
-    permission_master = PermissionMaster.find_or_create_by!(pm_code: code) do |pm|
+    PermissionMaster.find_or_create_by!(pm_code: code) do |pm|
       pm.pm_name = name
       pm.pm_sort = index + 1
     end
-
-    permission_master.role_permissions.find_by(rp_user_type: :system_admin)&.update!(
-      rp_can_view: true, rp_can_create: true, rp_can_update: true, rp_can_delete: true
-    )
-    permission_master.role_permissions
-      .where(rp_user_type: %i[manager clerical general part_time])
-      .find_each { |rp| rp.update!(rp_can_view: true) }
   end
+
+  staff_role = PermissionRole.find_or_create_by!(role_name: "スタッフ") do |role|
+    role.role_sort = 1
+  end
+  staff_role.role_permissions.find_each { |rp| rp.update!(rp_can_view: true) }
 rescue ActiveRecord::RecordNotUnique
   retry
 end

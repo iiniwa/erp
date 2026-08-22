@@ -25,6 +25,8 @@ function toDefaultValues(setting: SystemSetting): SystemSettingFormValues {
     company_post: setting.company_post ?? "",
     company_address: setting.company_address ?? "",
     company_tel: setting.company_tel ?? "",
+    company_fax: setting.company_fax ?? "",
+    company_toll_free: setting.company_toll_free ?? "",
     company_email: setting.company_email ?? "",
     company_invoice_number: setting.company_invoice_number ?? "",
     company_corporate_number: setting.company_corporate_number ?? "",
@@ -111,6 +113,12 @@ export default function SystemSettingsForm({ setting }: { setting: SystemSetting
             <Input id="company_post" label="郵便番号" {...register("company_post")} />
             <Input id="company_address" label="所在地" {...register("company_address")} />
             <Input id="company_tel" label="電話番号" {...register("company_tel")} />
+            <Input id="company_fax" label="FAX番号" {...register("company_fax")} />
+            <Input
+              id="company_toll_free"
+              label="フリーダイヤル"
+              {...register("company_toll_free")}
+            />
             <Input
               id="company_email"
               label="メールアドレス"

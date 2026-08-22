@@ -73,6 +73,8 @@ module Api
           user_code: user.user_code,
           user_id: user.user_id,
           user_type: user.user_type,
+          role_id: user.role_id,
+          role_name: user.permission_role&.role_name,
           user_familyname: user.user_familyname,
           user_firstname: user.user_firstname,
           user_must_change_password: user.user_must_change_password,
@@ -83,9 +85,19 @@ module Api
       # Lets the frontend hide/show actions it has no access to without
       # guessing at the RBAC rules; the backend's Pundit policies remain
       # the actual enforcement point regardless of what the UI shows.
+      # system_admin always has full access (see ApplicationPolicy) so it
+      # is reported as such here regardless of role_id assignment.
       def permissions_for(user)
+        if user.system_admin?
+          return PermissionMaster.all.each_with_object({}) do |pm, memo|
+            memo[pm.pm_code] = { view: true, create: true, update: true, delete: true }
+          end
+        end
+
+        return {} unless user.role_id
+
         RolePermission.includes(:permission_master)
-          .where(rp_user_type: user.user_type)
+          .where(role_id: user.role_id)
           .each_with_object({}) do |rp, memo|
             memo[rp.permission_master.pm_code] = {
               view: rp.rp_can_view,

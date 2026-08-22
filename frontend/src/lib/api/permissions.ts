@@ -3,9 +3,12 @@ import { getSessionToken } from "@/lib/session";
 
 export type PermissionMaster = { pm_id: number; pm_code: string; pm_name: string; pm_sort: number };
 
+export type PermissionRole = { role_id: number; role_name: string; role_sort: number };
+
 export type RolePermission = {
   rp_id: number;
-  rp_user_type: string;
+  role_id: number;
+  role_name: string;
   pm_id: number;
   pm_code: string;
   pm_name: string;
@@ -30,6 +33,22 @@ export async function fetchPermissionMasters(): Promise<PermissionMaster[]> {
 
   const body = (await response.json()) as { permission_masters: PermissionMaster[] };
   return body.permission_masters;
+}
+
+// Freely admin-created/deleted permission levels (roles), independent of
+// the fixed employment-classification user_type. Same "no session ->
+// empty, anything else -> throw" contract as the fetchers above.
+export async function fetchPermissionRoles(): Promise<PermissionRole[]> {
+  const token = await getSessionToken();
+  if (!token) return [];
+
+  const response = await backendFetch("/api/v1/permission_roles", { sessionToken: token });
+  if (!response.ok) {
+    throw new Error(`Failed to fetch permission roles (status ${response.status})`);
+  }
+
+  const body = (await response.json()) as { permission_roles: PermissionRole[] };
+  return body.permission_roles;
 }
 
 export async function fetchRolePermissions(): Promise<RolePermission[]> {
