@@ -108,7 +108,9 @@ RSpec.describe "Api::V1::SystemSettings", type: :request do
       old_file = create(:stored_file, file_path: "general/old-logo.png")
       SystemSetting.instance.update!(system_logo_file: old_file)
       allow(FileStorageService).to receive(:upload).and_return("general/new-logo.png")
-      allow(FileStorageService).to receive(:delete).and_raise(FileStorageService::Error, "boom")
+      expect(FileStorageService).to receive(:delete)
+        .with("general/old-logo.png")
+        .and_raise(FileStorageService::Error, "boom")
       upload = fixture_file_upload(Rails.root.join("spec/fixtures/files/logo.png"), "image/png")
 
       patch "/api/v1/system_setting", params: { system_logo_file: upload },
