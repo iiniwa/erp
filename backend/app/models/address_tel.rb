@@ -19,7 +19,16 @@ class AddressTel < ApplicationRecord
   # error instead of a raw ActiveRecord::RecordNotUnique in the common case.
   # is_emergency is independent of at_label_type (a mobile, home, or
   # free-form number can all serve as the emergency contact).
-  validates :address_id, uniqueness: { scope: :is_emergency }, if: :is_emergency?
+  #
+  # A plain `validates :address_id, uniqueness: { scope: :is_emergency }`
+  # queries the DB fresh, which breaks *swapping* the emergency contact in
+  # one nested-attributes request: demoting tel A (is_emergency: false)
+  # and promoting tel B (is_emergency: true) together would still find
+  # A's old, not-yet-persisted `true` value in the DB and reject B as a
+  # duplicate. #only_one_emergency_contact_per_address instead accounts
+  # for sibling tels' pending (in-memory) state when they're loaded as
+  # part of the same Address's nested attributes.
+  validate :only_one_emergency_contact_per_address, if: :is_emergency?
   validate :emergency_contact_requires_employee_address
 
   before_destroy :prevent_invalid_employee_primary_removal
@@ -81,5 +90,27 @@ class AddressTel < ApplicationRecord
     return if address&.address_user_code.present?
 
     errors.add(:is_emergency, "は従業員本人のアドレスにのみ設定できます")
+  end
+
+  # Finds other emergency-flagged rows for this address, then excludes
+  # any that a sibling object already loaded into address.address_tels
+  # (i.e. part of the same nested-attributes submission) is
+  # simultaneously demoting to is_emergency: false — that's a swap, not
+  # a genuine second emergency contact.
+  def only_one_emergency_contact_per_address
+    return unless address_id
+
+    conflicting = self.class.where(address_id: address_id, is_emergency: true).where.not(at_id: at_id)
+    conflicting = conflicting.reject { |tel| demoted_in_pending_siblings?(tel) }
+    return if conflicting.empty?
+
+    errors.add(:base, "緊急連絡先は1件までしか登録できません")
+  end
+
+  def demoted_in_pending_siblings?(persisted_tel)
+    return false unless address
+
+    pending_sibling = address.address_tels.find { |tel| tel.at_id == persisted_tel.at_id }
+    pending_sibling && !pending_sibling.is_emergency?
   end
 end

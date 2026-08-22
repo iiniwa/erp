@@ -44,6 +44,24 @@ RSpec.describe AddressTel do
 
       expect(other).to be_valid
     end
+
+    it "allows swapping which tel is the emergency contact in a single nested update" do
+      user = create(:user)
+      address = create(:address, user: user)
+      create(:address_tel, address: address, at_label_type: :mobile, at_sort: 1)
+      current_emergency = create(:address_tel, address: address, at_label_type: :home, is_emergency: true, at_sort: 2)
+      next_emergency = create(:address_tel, address: address, at_label_type: :main, at_sort: 3)
+
+      address.update!(
+        address_tels_attributes: [
+          { id: current_emergency.at_id, is_emergency: false },
+          { id: next_emergency.at_id, is_emergency: true }
+        ]
+      )
+
+      expect(current_emergency.reload.is_emergency).to be false
+      expect(next_emergency.reload.is_emergency).to be true
+    end
   end
 
   describe "primary promotion on destroy" do
