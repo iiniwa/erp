@@ -25,7 +25,15 @@ export default function EmployeeCreateForm({
     register,
     handleSubmit,
     formState: { errors, isSubmitting },
-  } = useForm<CreateEmployeeFormValues>({ resolver: zodResolver(createEmployeeSchema) });
+  } = useForm<CreateEmployeeFormValues>({
+    resolver: zodResolver(createEmployeeSchema),
+    // No defaultValue for user_type: without an explicit placeholder, a
+    // native <select> defaults to its first <option>, which would
+    // silently submit "system_admin" (the highest-privilege value) if the
+    // user never touches the field. The blank placeholder forces an
+    // explicit, validated choice instead.
+    defaultValues: { user_type: "" as CreateEmployeeFormValues["user_type"] },
+  });
 
   async function onSubmit(values: CreateEmployeeFormValues) {
     try {
@@ -88,6 +96,7 @@ export default function EmployeeCreateForm({
             className="min-h-11 w-full rounded-md border border-brand-gray-300 px-3 py-2 focus:border-brand-green-500 focus:outline-none focus:ring-1 focus:ring-brand-green-500"
             {...register("user_type")}
           >
+            <option value="">選択してください</option>
             {userTypeOptions.map((option) => (
               <option key={option.value} value={option.value}>
                 {option.label}

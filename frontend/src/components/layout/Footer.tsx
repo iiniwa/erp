@@ -1,7 +1,7 @@
-export default function Footer() {
+export default function Footer({ systemName }: { systemName: string }) {
   return (
     <footer className="border-t border-brand-gray-200 bg-white py-4 text-center text-sm text-brand-gray-500">
-      © {new Date().getFullYear()} ERPシステム
+      © {new Date().getFullYear()} {systemName}
     </footer>
   );
 }

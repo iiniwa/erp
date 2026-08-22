@@ -58,6 +58,37 @@ RSpec.describe User do
     end
   end
 
+  describe "single system_admin validation" do
+    it "rejects creating a second system_admin" do
+      create(:user, user_type: :system_admin)
+      duplicate = build(:user, user_type: :system_admin)
+
+      expect(duplicate).not_to be_valid
+      expect(duplicate.errors[:base]).to be_present
+    end
+
+    it "rejects even against a soft-deleted system_admin" do
+      admin = create(:user, user_type: :system_admin)
+      admin.soft_delete!
+      duplicate = build(:user, user_type: :system_admin)
+
+      expect(duplicate).not_to be_valid
+    end
+
+    it "allows re-saving the existing system_admin" do
+      admin = create(:user, user_type: :system_admin)
+
+      expect(admin).to be_valid
+    end
+
+    it "allows non-system_admin user_types freely" do
+      create(:user, user_type: :general)
+      other = build(:user, user_type: :general)
+
+      expect(other).to be_valid
+    end
+  end
+
   describe "user_id uniqueness" do
     it "allows multiple users with a NULL user_id" do
       create(:user, user_id: nil)

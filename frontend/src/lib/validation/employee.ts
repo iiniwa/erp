@@ -42,7 +42,7 @@ const nameFields = {
 const roleField = { role_id: z.string().optional().or(z.literal("")) };
 
 export const createEmployeeSchema = z.object({
-  user_type: z.enum(USER_TYPE_VALUES),
+  user_type: z.enum(USER_TYPE_VALUES, { error: "区分を選択してください" }),
   user_birth: z.string().min(1, "生年月日を入力してください"),
   ...nameFields,
   ...roleField,

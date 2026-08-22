@@ -29,6 +29,13 @@ class User < ApplicationRecord
   validates :user_id, uniqueness: true, allow_nil: true
   validates :user_familyname, :user_firstname, :user_familyname_ruby, :user_firstname_ruby, presence: true
   validates :user_pass, presence: true
+  # Mirrors the DB-level uniqueness constraint on system_admin_slot (spec
+  # section 13.1: exactly one system_admin) as an application validation,
+  # so picking system_admin on the employee create/edit form surfaces a
+  # normal 422 error instead of an unhandled RecordNotUnique. Checked
+  # against with_deleted since the DB constraint isn't scoped to
+  # deleted_at either.
+  validate :single_system_admin, if: :system_admin?
 
   before_validation :normalize_user_id
   before_create :assign_user_code
@@ -77,6 +84,12 @@ class User < ApplicationRecord
   end
 
   private
+
+  def single_system_admin
+    existing = self.class.with_deleted.system_admin
+    existing = existing.where.not(user_code: user_code) if user_code.present?
+    errors.add(:base, "システム管理者は既に登録されているため、これ以上登録できません") if existing.exists?
+  end
 
   # Blank strings (e.g. an unfilled form field submitted as "") must not
   # reach the uniqueness validation as-is: unlike nil, "" is a normal
