@@ -5,9 +5,9 @@ RSpec.describe AddressTel do
     it "rejects a second emergency contact at the model validation level" do
       user = create(:user)
       address = create(:address, user: user)
-      create(:address_tel, address: address, at_label_type: :emergency, at_sort: 2)
+      create(:address_tel, address: address, is_emergency: true, at_sort: 2)
 
-      duplicate = build(:address_tel, address: address, at_label_type: :emergency, at_sort: 3)
+      duplicate = build(:address_tel, address: address, is_emergency: true, at_sort: 3)
 
       expect(duplicate).not_to be_valid
     end
@@ -15,18 +15,33 @@ RSpec.describe AddressTel do
     it "also rejects a second emergency contact at the database level" do
       user = create(:user)
       address = create(:address, user: user)
-      create(:address_tel, address: address, at_label_type: :emergency, at_sort: 2)
+      create(:address_tel, address: address, is_emergency: true, at_sort: 2)
 
-      duplicate = build(:address_tel, address: address, at_label_type: :emergency, at_sort: 3)
-
-      expect { duplicate.save!(validate: false) }.to raise_error(ActiveRecord::RecordNotUnique)
+      # A raw INSERT, bypassing both validations and the
+      # before_save :demote_other_emergency_contacts callback (which
+      # would otherwise self-heal a conflict created through the model),
+      # to confirm the unique index itself still guards against this.
+      expect do
+        AddressTel.connection.execute(
+          "INSERT INTO address_tels (address_id, at_number, at_label_type, at_sort, is_emergency) " \
+          "VALUES (#{AddressTel.connection.quote(address.address_id)}, '0300000000', 2, 3, true)"
+        )
+      end.to raise_error(ActiveRecord::RecordNotUnique)
     end
 
     it "rejects an emergency contact on an address without an associated user" do
       address = create(:address, user: nil)
-      tel = build(:address_tel, address: address, at_label_type: :emergency)
+      tel = build(:address_tel, address: address, is_emergency: true)
 
       expect(tel).not_to be_valid
+    end
+
+    it "is independent of at_label_type — any label can be the emergency contact" do
+      user = create(:user)
+      address = create(:address, user: user)
+      tel = build(:address_tel, address: address, at_label_type: :home, is_emergency: true, at_sort: 2)
+
+      expect(tel).to be_valid
     end
 
     it "allows multiple non-emergency labels on the same address" do
@@ -35,6 +50,64 @@ RSpec.describe AddressTel do
       other = build(:address_tel, address: address, at_label_type: :main, at_sort: 2)
 
       expect(other).to be_valid
+    end
+
+    it "allows swapping which tel is the emergency contact in a single nested update" do
+      user = create(:user)
+      address = create(:address, user: user)
+      create(:address_tel, address: address, at_label_type: :mobile, at_sort: 1)
+      current_emergency = create(:address_tel, address: address, at_label_type: :home, is_emergency: true, at_sort: 2)
+      next_emergency = create(:address_tel, address: address, at_label_type: :main, at_sort: 3)
+
+      address.update!(
+        address_tels_attributes: [
+          { id: current_emergency.at_id, is_emergency: false },
+          { id: next_emergency.at_id, is_emergency: true }
+        ]
+      )
+
+      expect(current_emergency.reload.is_emergency).to be false
+      expect(next_emergency.reload.is_emergency).to be true
+    end
+
+    it "allows the swap even when the promotion is listed before the demotion" do
+      user = create(:user)
+      address = create(:address, user: user)
+      create(:address_tel, address: address, at_label_type: :mobile, at_sort: 1)
+      current_emergency = create(:address_tel, address: address, at_label_type: :home, is_emergency: true, at_sort: 2)
+      next_emergency = create(:address_tel, address: address, at_label_type: :main, at_sort: 3)
+
+      # accepts_nested_attributes_for saves records in submission order,
+      # not at_sort order, so the promotion (which would otherwise try to
+      # save while the old row is still `true` in the DB) is listed first
+      # on purpose here.
+      address.update!(
+        address_tels_attributes: [
+          { id: next_emergency.at_id, is_emergency: true },
+          { id: current_emergency.at_id, is_emergency: false }
+        ]
+      )
+
+      expect(next_emergency.reload.is_emergency).to be true
+      expect(current_emergency.reload.is_emergency).to be false
+    end
+
+    it "allows destroying the current emergency contact while promoting another in the same update" do
+      user = create(:user)
+      address = create(:address, user: user)
+      create(:address_tel, address: address, at_label_type: :mobile, at_sort: 1)
+      current_emergency = create(:address_tel, address: address, at_label_type: :home, is_emergency: true, at_sort: 2)
+      next_emergency = create(:address_tel, address: address, at_label_type: :main, at_sort: 3)
+
+      address.update!(
+        address_tels_attributes: [
+          { id: current_emergency.at_id, _destroy: true },
+          { id: next_emergency.at_id, is_emergency: true }
+        ]
+      )
+
+      expect(AddressTel.exists?(current_emergency.at_id)).to be false
+      expect(next_emergency.reload.is_emergency).to be true
     end
   end
 

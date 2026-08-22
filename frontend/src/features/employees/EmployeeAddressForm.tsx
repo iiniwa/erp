@@ -1,35 +1,32 @@
 "use client";
 
-import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useFieldArray, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { addressSchema, type AddressFormValues } from "@/lib/validation/address";
-import type { AddressBookEntry, AddressCategory } from "@/lib/api/addresses";
+import {
+  employeeAddressSchema,
+  type EmployeeAddressFormValues,
+} from "@/lib/validation/employee-address";
+import type { EmployeeAddress } from "@/lib/api/employee-address";
 import { TelFieldRow, EmailFieldRow } from "@/features/addresses/TelEmailFields";
 import { useToast } from "@/components/ui/ToastProvider";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import Card from "@/components/ui/Card";
 
-type AddressFormProps = {
-  mode: "create" | "edit";
-  address?: AddressBookEntry;
-  categories: AddressCategory[];
-};
-
-function toDefaultTel(tel: AddressBookEntry["address_tels"][number]) {
+function toDefaultTel(tel: EmployeeAddress["address_tels"][number]) {
   return {
     id: tel.at_id,
     at_number: tel.at_number,
-    at_label_type: tel.at_label_type as AddressFormValues["address_tels"][number]["at_label_type"],
+    at_label_type:
+      tel.at_label_type as EmployeeAddressFormValues["address_tels"][number]["at_label_type"],
     at_label_free: tel.at_label_free ?? "",
     at_sort: tel.at_sort,
     is_emergency: tel.is_emergency,
   };
 }
 
-function toDefaultEmail(email: AddressBookEntry["address_emails"][number]) {
+function toDefaultEmail(email: EmployeeAddress["address_emails"][number]) {
   return {
     id: email.ae_id,
     ae_email: email.ae_email,
@@ -38,32 +35,30 @@ function toDefaultEmail(email: AddressBookEntry["address_emails"][number]) {
   };
 }
 
-export default function AddressForm({ mode, address, categories }: AddressFormProps) {
+export default function EmployeeAddressForm({
+  userCode,
+  address,
+}: {
+  userCode: string;
+  address: EmployeeAddress;
+}) {
   const router = useRouter();
   const { showToast } = useToast();
-  const [categoryList, setCategoryList] = useState(categories);
-  const [newCategoryName, setNewCategoryName] = useState("");
-  const [addingCategory, setAddingCategory] = useState(false);
-
   const {
     register,
     control,
     handleSubmit,
-    setValue,
     getValues,
     formState: { errors, isSubmitting },
-  } = useForm<AddressFormValues>({
-    resolver: zodResolver(addressSchema),
+  } = useForm<EmployeeAddressFormValues>({
+    resolver: zodResolver(employeeAddressSchema),
     defaultValues: {
-      address_category_id: address?.address_category_id ?? categories[0]?.ac_id,
-      address_name: address?.address_name ?? "",
-      address_ruby: address?.address_ruby ?? "",
-      address_contact_name: address?.address_contact_name ?? "",
-      address_post: address?.address_post ?? "",
-      address_residence: address?.address_residence ?? "",
-      address_memo: address?.address_memo ?? "",
-      address_tels: address?.address_tels.map(toDefaultTel) ?? [],
-      address_emails: address?.address_emails.map(toDefaultEmail) ?? [],
+      address_contact_name: address.address_contact_name ?? "",
+      address_post: address.address_post ?? "",
+      address_residence: address.address_residence ?? "",
+      address_memo: address.address_memo ?? "",
+      address_tels: address.address_tels.map(toDefaultTel),
+      address_emails: address.address_emails.map(toDefaultEmail),
     },
   });
 
@@ -92,35 +87,8 @@ export default function AddressForm({ mode, address, categories }: AddressFormPr
     return count + 1;
   }
 
-  async function handleAddCategory() {
-    if (!newCategoryName.trim()) return;
-    setAddingCategory(true);
-    try {
-      const response = await fetch("/api/address-categories", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ac_name: newCategoryName.trim(), ac_sort: categoryList.length + 1 }),
-      });
-      const body = await response.json().catch(() => ({}));
-      if (!response.ok) {
-        showToast(body.errors?.join("、") ?? "カテゴリの追加に失敗しました。", "error");
-        return;
-      }
-      setCategoryList((prev) => [...prev, body.address_category]);
-      setValue("address_category_id", body.address_category.ac_id);
-      setNewCategoryName("");
-    } catch {
-      showToast("通信に失敗しました。ネットワーク接続を確認してください。", "error");
-    } finally {
-      setAddingCategory(false);
-    }
-  }
-
-  async function onSubmit(values: AddressFormValues) {
+  async function onSubmit(values: EmployeeAddressFormValues) {
     const payload = {
-      address_category_id: values.address_category_id,
-      address_name: values.address_name,
-      address_ruby: values.address_ruby,
       address_contact_name: values.address_contact_name || null,
       address_post: values.address_post || null,
       address_residence: values.address_residence || null,
@@ -130,9 +98,8 @@ export default function AddressForm({ mode, address, categories }: AddressFormPr
     };
 
     try {
-      const url = mode === "create" ? "/api/addresses" : `/api/addresses/${address?.address_id}`;
-      const response = await fetch(url, {
-        method: mode === "create" ? "POST" : "PATCH",
+      const response = await fetch(`/api/employees/${encodeURIComponent(userCode)}/address`, {
+        method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
@@ -144,8 +111,8 @@ export default function AddressForm({ mode, address, categories }: AddressFormPr
         return;
       }
 
-      showToast(mode === "create" ? "アドレス帳に登録しました。" : "更新しました。");
-      router.push(`/addresses/${body.address.address_id}`);
+      showToast("アドレス帳情報を更新しました。");
+      router.push(`/employees/${userCode}`);
       router.refresh();
     } catch {
       showToast("通信に失敗しました。ネットワーク接続を確認してください。", "error");
@@ -155,63 +122,6 @@ export default function AddressForm({ mode, address, categories }: AddressFormPr
   return (
     <Card className="max-w-2xl">
       <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-6">
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <Input
-            id="address_name"
-            label="名称"
-            error={errors.address_name?.message}
-            {...register("address_name")}
-          />
-          <Input
-            id="address_ruby"
-            label="ふりがな（ひらがな）"
-            error={errors.address_ruby?.message}
-            {...register("address_ruby")}
-          />
-        </div>
-
-        <div>
-          <label
-            htmlFor="address_category_id"
-            className="mb-1 block text-sm font-medium text-brand-gray-700"
-          >
-            カテゴリ
-          </label>
-          <select
-            id="address_category_id"
-            className="min-h-11 w-full rounded-md border border-brand-gray-300 px-3 py-2 focus:border-brand-green-500 focus:outline-none focus:ring-1 focus:ring-brand-green-500"
-            {...register("address_category_id", { valueAsNumber: true })}
-          >
-            {categoryList.map((category) => (
-              <option key={category.ac_id} value={category.ac_id}>
-                {category.ac_name}
-              </option>
-            ))}
-          </select>
-          {errors.address_category_id && (
-            <p role="alert" className="mt-1 text-sm text-red-600">
-              {errors.address_category_id.message}
-            </p>
-          )}
-          <div className="mt-2 flex gap-2">
-            <input
-              type="text"
-              value={newCategoryName}
-              onChange={(event) => setNewCategoryName(event.target.value)}
-              placeholder="新しいカテゴリ名"
-              className="min-h-11 flex-1 rounded-md border border-brand-gray-300 px-3 py-2 text-sm focus:border-brand-green-500 focus:outline-none focus:ring-1 focus:ring-brand-green-500"
-            />
-            <Button
-              type="button"
-              variant="secondary"
-              disabled={addingCategory}
-              onClick={handleAddCategory}
-            >
-              追加
-            </Button>
-          </div>
-        </div>
-
         <Input
           id="address_contact_name"
           label="担当者名（任意）"
@@ -264,6 +174,9 @@ export default function AddressForm({ mode, address, categories }: AddressFormPr
               追加
             </Button>
           </div>
+          <p className="mb-2 text-sm text-brand-gray-500">
+            並び順1番の電話番号は携帯である必要があります。
+          </p>
           <div className="flex flex-col gap-3">
             {telArray.fields.map((field, index) => (
               <TelFieldRow

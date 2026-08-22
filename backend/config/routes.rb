@@ -21,6 +21,7 @@ Rails.application.routes.draw do
         member do
           post :retire
         end
+        resource :address, only: %i[show update], controller: "employee_addresses"
       end
 
       resources :addresses, only: %i[index show create update destroy], param: :address_id

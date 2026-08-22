@@ -31,19 +31,35 @@ export default async function AddressDetailPage({
     notFound();
   }
 
+  // Employee-linked addresses can only be edited/deleted from Employee
+  // Management (the backend rejects both through this screen) — the
+  // linkage itself must never be changed carelessly from here.
+  const isEmployeeLinked = Boolean(address.address_user_code);
+
   return (
     <div>
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-semibold text-brand-gray-900">{address.address_name}</h1>
         <div className="flex gap-3">
-          <LinkButton href={`/addresses/${address.address_id}/edit`} variant="secondary">
-            編集
-          </LinkButton>
+          {isEmployeeLinked ? (
+            <LinkButton href={`/employees/${address.address_user_code}`} variant="secondary">
+              従業員管理で編集
+            </LinkButton>
+          ) : (
+            <LinkButton href={`/addresses/${address.address_id}/edit`} variant="secondary">
+              編集
+            </LinkButton>
+          )}
           <LinkButton href="/addresses" variant="secondary">
             一覧に戻る
           </LinkButton>
         </div>
       </div>
+      {isEmployeeLinked && (
+        <p className="mb-6 text-sm text-brand-gray-500">
+          このアドレス帳情報は従業員本人のものです。編集・削除は従業員管理から行ってください。
+        </p>
+      )}
       <Card className="mb-6">
         <dl className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Field label="ふりがな">{address.address_ruby}</Field>
@@ -64,6 +80,11 @@ export default async function AddressDetailPage({
               <li key={tel.at_id} className="text-brand-gray-900">
                 {tel.at_number}
                 <span className="ml-2 text-sm text-brand-gray-500">（{telLabel(tel)}）</span>
+                {tel.is_emergency && (
+                  <span className="ml-2 rounded bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700">
+                    緊急連絡先
+                  </span>
+                )}
               </li>
             ))}
           </ul>
@@ -86,7 +107,7 @@ export default async function AddressDetailPage({
           </ul>
         )}
       </Card>
-      <AddressActions addressId={address.address_id} />
+      {!isEmployeeLinked && <AddressActions addressId={address.address_id} />}
     </div>
   );
 }
