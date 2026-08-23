@@ -3,8 +3,10 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import type { AddressBookEntry } from "@/lib/api/addresses";
-import { normalizeForSearch } from "@/lib/kana";
+import { compareByRuby, gojuonRowLabel, normalizeForSearch } from "@/lib/kana";
 import DataTable, { type DataTableColumn } from "@/components/ui/DataTable";
+import DataCardList from "@/components/ui/DataCardList";
+import GojuonIndexBar from "@/features/addresses/GojuonIndexBar";
 import Input from "@/components/ui/Input";
 
 // Spec section 6: search runs entirely client-side against the full
@@ -25,13 +27,38 @@ function matchesQuery(address: AddressBookEntry, query: string): boolean {
   return haystacks.some((value) => normalizeForSearch(value).includes(normalizedQuery));
 }
 
+function rowDomId(address: AddressBookEntry) {
+  return `address-row-${address.address_id}`;
+}
+
 export default function AddressSearchList({ addresses }: { addresses: AddressBookEntry[] }) {
   const [query, setQuery] = useState("");
 
-  const filtered = useMemo(
-    () => addresses.filter((address) => matchesQuery(address, query)),
-    [addresses, query],
+  // Issue #33: あいうえお順 (gojuon order) by ふりがな, both for display
+  // and as the basis the index-jump bar scrolls within.
+  const sorted = useMemo(
+    () => [...addresses].sort((a, b) => compareByRuby(a.address_ruby, b.address_ruby)),
+    [addresses],
   );
+
+  const filtered = useMemo(
+    () => sorted.filter((address) => matchesQuery(address, query)),
+    [sorted, query],
+  );
+
+  // First entry in the current (sorted + filtered) list for each gojuon
+  // row, so the index bar jumps to whatever is actually visible right now
+  // rather than a position from the unfiltered list.
+  const rowTargets = useMemo(() => {
+    const targets = new Map<string, string>();
+    for (const address of filtered) {
+      const label = gojuonRowLabel(address.address_ruby);
+      if (label && !targets.has(label)) {
+        targets.set(label, rowDomId(address));
+      }
+    }
+    return targets;
+  }, [filtered]);
 
   const columns: DataTableColumn<AddressBookEntry>[] = [
     {
@@ -46,7 +73,11 @@ export default function AddressSearchList({ addresses }: { addresses: AddressBoo
         </Link>
       ),
     },
-    { key: "category", header: "カテゴリ", render: (address) => address.address_category_name },
+    {
+      key: "contact",
+      header: "担当者名",
+      render: (address) => address.address_contact_name ?? "",
+    },
     {
       key: "tel",
       header: "電話番号",
@@ -56,11 +87,6 @@ export default function AddressSearchList({ addresses }: { addresses: AddressBoo
       key: "email",
       header: "メールアドレス",
       render: (address) => address.address_emails[0]?.ae_email ?? "",
-    },
-    {
-      key: "contact",
-      header: "担当者名",
-      render: (address) => address.address_contact_name ?? "",
     },
   ];
 
@@ -75,12 +101,26 @@ export default function AddressSearchList({ addresses }: { addresses: AddressBoo
           placeholder="キーワードを入力"
         />
       </div>
-      <DataTable
-        columns={columns}
-        rows={filtered}
-        rowKey={(address) => address.address_id}
-        emptyMessage="該当するアドレス帳データがありません。"
-      />
+      <GojuonIndexBar rowTargets={rowTargets} />
+      {/* PC: table. Phone-width: one card per entry (same columns). */}
+      <div className="hidden sm:block">
+        <DataTable
+          columns={columns}
+          rows={filtered}
+          rowKey={(address) => address.address_id}
+          rowId={rowDomId}
+          emptyMessage="該当するアドレス帳データがありません。"
+        />
+      </div>
+      <div className="sm:hidden">
+        <DataCardList
+          columns={columns}
+          rows={filtered}
+          rowKey={(address) => address.address_id}
+          rowId={rowDomId}
+          emptyMessage="該当するアドレス帳データがありません。"
+        />
+      </div>
     </div>
   );
 }
