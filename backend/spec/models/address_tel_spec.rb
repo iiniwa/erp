@@ -187,6 +187,10 @@ RSpec.describe AddressTel do
       expect(build(:address_tel, at_number: "+1-415-555-0100")).to be_valid
     end
 
+    it "accepts an international number written without hyphens" do
+      expect(build(:address_tel, at_number: "+14155552671")).to be_valid
+    end
+
     it "rejects a number with no hyphens" do
       expect(build(:address_tel, at_number: "09012345678")).not_to be_valid
     end

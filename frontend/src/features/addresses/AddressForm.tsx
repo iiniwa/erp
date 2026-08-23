@@ -92,8 +92,12 @@ export default function AddressForm({ mode, address, categories }: AddressFormPr
     }
   }
 
-  function nextSort(count: number) {
-    return count + 1;
+  // Counts only surviving (non-destroyed) rows: removeTel/removeEmail
+  // mark an existing row's _destroy flag rather than removing it from the
+  // field array, so `fields.length` alone would count rows that won't
+  // exist after save and leave a gap in at_sort/ae_sort.
+  function nextSort(fields: { _destroy?: boolean }[]) {
+    return fields.filter((field) => !field._destroy).length + 1;
   }
 
   async function handleAddCategory() {
@@ -263,7 +267,7 @@ export default function AddressForm({ mode, address, categories }: AddressFormPr
                   at_number: "",
                   at_label_type: "mobile",
                   at_label_free: "",
-                  at_sort: nextSort(telArray.fields.length),
+                  at_sort: nextSort(telArray.fields),
                   is_emergency: false,
                 })
               }
@@ -295,7 +299,7 @@ export default function AddressForm({ mode, address, categories }: AddressFormPr
                 emailArray.append({
                   ae_email: "",
                   ae_label: "",
-                  ae_sort: nextSort(emailArray.fields.length),
+                  ae_sort: nextSort(emailArray.fields),
                 })
               }
             >

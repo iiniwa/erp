@@ -12,7 +12,12 @@ module PhoneNumberFormat
   MOBILE = /\A0[5789]0-\d{4}-\d{4}\z/
   FREEDIAL = /\A0(120|800|570)-\d{3}-\d{3}\z/
   LANDLINE = /\A0\d{1,4}-\d{1,4}-\d{4}\z/
-  INTERNATIONAL = /\A\+\d{1,3}-\d{1,4}(-\d{1,4}){1,3}\z/
+  # Deliberately not grouping-strict: unlike Japan's domestic numbers,
+  # requiring specific hyphen positions here would reject perfectly valid
+  # numbers written without hyphens at all (e.g. "+14155552671"), since
+  # per-country grouping conventions vary and are out of scope. Only "+"
+  # followed by digits/hyphens, with a digit-count check, matters.
+  INTERNATIONAL = /\A\+[\d-]+\z/
 
   def self.valid?(value)
     return false if value.blank?

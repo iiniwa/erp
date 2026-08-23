@@ -11,7 +11,12 @@
 const MOBILE = /^0[5789]0-\d{4}-\d{4}$/;
 const FREEDIAL = /^0(120|800|570)-\d{3}-\d{3}$/;
 const LANDLINE = /^0\d{1,4}-\d{1,4}-\d{4}$/;
-const INTERNATIONAL = /^\+\d{1,3}-\d{1,4}(-\d{1,4}){1,3}$/;
+// Deliberately not grouping-strict: unlike Japan's domestic numbers,
+// requiring specific hyphen positions here would reject perfectly valid
+// numbers written without hyphens at all (e.g. "+14155552671"), since
+// per-country grouping conventions vary and are out of scope. Only "+"
+// followed by digits/hyphens, with a digit-count check, matters.
+const INTERNATIONAL = /^\+[\d-]+$/;
 
 export function isValidPhoneNumber(value: string): boolean {
   if (!value) return false;

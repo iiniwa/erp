@@ -108,8 +108,12 @@ export default function EmployeeEditForm({ employee, address, permissionRoles }:
     }
   }
 
-  function nextSort(count: number) {
-    return count + 1;
+  // Counts only surviving (non-destroyed) rows: removeTel/removeEmail
+  // mark an existing row's _destroy flag rather than removing it from the
+  // field array, so `fields.length` alone would count rows that won't
+  // exist after save and leave a gap in at_sort/ae_sort.
+  function nextSort(fields: { _destroy?: boolean }[]) {
+    return fields.filter((field) => !field._destroy).length + 1;
   }
 
   async function onSubmit(values: UpdateEmployeeFormValues) {
@@ -124,17 +128,29 @@ export default function EmployeeEditForm({ employee, address, permissionRoles }:
       ...profileFields
     } = values;
 
+    // Two separate backend resources (t.users / t.address) behind one
+    // form — there's no cross-resource transaction, so a mid-way failure
+    // is possible. Submitting sequentially (profile first) rather than in
+    // parallel keeps the failure mode legible: if the address save fails,
+    // the profile save has already definitely succeeded, so the error
+    // says so explicitly instead of leaving the user unsure what, if
+    // anything, was saved.
     try {
-      // Two separate backend resources (t.users / t.address), so this is
-      // two requests — but one form, one submit, one error surface, so it
-      // still reads as a single save to the user.
-      const [profileResponse, addressResponse] = await Promise.all([
-        fetch(`/api/employees/${employee.user_code}`, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ ...profileFields, role_id: decodeKubun(kubun).role_id }),
-        }),
-        fetch(`/api/employees/${encodeURIComponent(employee.user_code)}/address`, {
+      const profileResponse = await fetch(`/api/employees/${employee.user_code}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...profileFields, role_id: decodeKubun(kubun).role_id }),
+      });
+      const profileBody = await profileResponse.json().catch(() => ({}));
+
+      if (!profileResponse.ok) {
+        showToast(profileBody.errors?.join("、") ?? "更新に失敗しました。", "error");
+        return;
+      }
+
+      const addressResponse = await fetch(
+        `/api/employees/${encodeURIComponent(employee.user_code)}/address`,
+        {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -145,17 +161,15 @@ export default function EmployeeEditForm({ employee, address, permissionRoles }:
             address_tels_attributes: address_tels,
             address_emails_attributes: address_emails,
           }),
-        }),
-      ]);
+        },
+      );
+      const addressBody = await addressResponse.json().catch(() => ({}));
 
-      const [profileBody, addressBody] = await Promise.all([
-        profileResponse.json().catch(() => ({})),
-        addressResponse.json().catch(() => ({})),
-      ]);
-
-      const errorMessages = [...(profileBody.errors ?? []), ...(addressBody.errors ?? [])];
-      if (!profileResponse.ok || !addressResponse.ok) {
-        showToast(errorMessages.join("、") || "更新に失敗しました。", "error");
+      if (!addressResponse.ok) {
+        showToast(
+          `プロフィールは更新されましたが、アドレス帳情報の更新に失敗しました。${addressBody.errors?.join("、") ?? ""}`,
+          "error",
+        );
         return;
       }
 
@@ -290,7 +304,7 @@ export default function EmployeeEditForm({ employee, address, permissionRoles }:
                   at_number: "",
                   at_label_type: "mobile",
                   at_label_free: "",
-                  at_sort: nextSort(telArray.fields.length),
+                  at_sort: nextSort(telArray.fields),
                   is_emergency: false,
                 })
               }
@@ -325,7 +339,7 @@ export default function EmployeeEditForm({ employee, address, permissionRoles }:
                 emailArray.append({
                   ae_email: "",
                   ae_label: "",
-                  ae_sort: nextSort(emailArray.fields.length),
+                  ae_sort: nextSort(emailArray.fields),
                 })
               }
             >
