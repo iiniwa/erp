@@ -27,8 +27,27 @@ function matchesQuery(address: AddressBookEntry, query: string): boolean {
   return haystacks.some((value) => normalizeForSearch(value).includes(normalizedQuery));
 }
 
-function rowDomId(address: AddressBookEntry) {
-  return `address-row-${address.address_id}`;
+// Ordering within address_tels/address_emails only guarantees ascending
+// sort, not that a sort=1 entry exists at index 0 — select it explicitly.
+function primaryTel(address: AddressBookEntry) {
+  return address.address_tels.find((tel) => tel.at_sort === 1);
+}
+
+function primaryEmail(address: AddressBookEntry) {
+  return address.address_emails.find((email) => email.ae_sort === 1);
+}
+
+// The table and card layouts both stay mounted (CSS toggles which is
+// visible per breakpoint — see the wrapper divs below), so a single DOM
+// id per address would collide between them. Distinct ids per layout,
+// with the jump handler trying both: scrollIntoView on a `display:none`
+// element is a no-op, so only whichever one is actually visible scrolls.
+function tableRowDomId(addressId: string) {
+  return `address-row-table-${addressId}`;
+}
+
+function cardRowDomId(addressId: string) {
+  return `address-row-card-${addressId}`;
 }
 
 export default function AddressSearchList({ addresses }: { addresses: AddressBookEntry[] }) {
@@ -46,19 +65,27 @@ export default function AddressSearchList({ addresses }: { addresses: AddressBoo
     [sorted, query],
   );
 
-  // First entry in the current (sorted + filtered) list for each gojuon
-  // row, so the index bar jumps to whatever is actually visible right now
-  // rather than a position from the unfiltered list.
+  // First entry's address_id in the current (sorted + filtered) list for
+  // each gojuon row, so the index bar jumps to whatever is actually
+  // visible right now rather than a position from the unfiltered list.
   const rowTargets = useMemo(() => {
     const targets = new Map<string, string>();
     for (const address of filtered) {
       const label = gojuonRowLabel(address.address_ruby);
       if (label && !targets.has(label)) {
-        targets.set(label, rowDomId(address));
+        targets.set(label, address.address_id);
       }
     }
     return targets;
   }, [filtered]);
+
+  function jumpToRow(label: string) {
+    const addressId = rowTargets.get(label);
+    if (!addressId) return;
+    const options: ScrollIntoViewOptions = { behavior: "smooth", block: "start" };
+    document.getElementById(tableRowDomId(addressId))?.scrollIntoView(options);
+    document.getElementById(cardRowDomId(addressId))?.scrollIntoView(options);
+  }
 
   const columns: DataTableColumn<AddressBookEntry>[] = [
     {
@@ -81,12 +108,12 @@ export default function AddressSearchList({ addresses }: { addresses: AddressBoo
     {
       key: "tel",
       header: "電話番号",
-      render: (address) => address.address_tels[0]?.at_number ?? "",
+      render: (address) => primaryTel(address)?.at_number ?? "",
     },
     {
       key: "email",
       header: "メールアドレス",
-      render: (address) => address.address_emails[0]?.ae_email ?? "",
+      render: (address) => primaryEmail(address)?.ae_email ?? "",
     },
   ];
 
@@ -101,14 +128,14 @@ export default function AddressSearchList({ addresses }: { addresses: AddressBoo
           placeholder="キーワードを入力"
         />
       </div>
-      <GojuonIndexBar rowTargets={rowTargets} />
+      <GojuonIndexBar availableLabels={new Set(rowTargets.keys())} onJump={jumpToRow} />
       {/* PC: table. Phone-width: one card per entry (same columns). */}
       <div className="hidden sm:block">
         <DataTable
           columns={columns}
           rows={filtered}
           rowKey={(address) => address.address_id}
-          rowId={rowDomId}
+          rowId={(address) => tableRowDomId(address.address_id)}
           emptyMessage="該当するアドレス帳データがありません。"
         />
       </div>
@@ -117,7 +144,7 @@ export default function AddressSearchList({ addresses }: { addresses: AddressBoo
           columns={columns}
           rows={filtered}
           rowKey={(address) => address.address_id}
-          rowId={rowDomId}
+          rowId={(address) => cardRowDomId(address.address_id)}
           emptyMessage="該当するアドレス帳データがありません。"
         />
       </div>
