@@ -57,14 +57,14 @@ RSpec.describe "Api::V1::EmployeeAddresses", type: :request do
 
       patch "/api/v1/users/#{employee.user_code}/address",
         params: {
-          address_tels_attributes: [ { at_number: "09011112222", at_label_type: "mobile", at_sort: 1 } ]
+          address_tels_attributes: [ { at_number: "090-1111-2222", at_label_type: "mobile", at_sort: 1 } ]
         }, headers: authenticated_headers(session_token), as: :json
 
       expect(response).to have_http_status(:ok)
       address = Address.find_by(address_user_code: employee.user_code)
       expect(address).to be_present
       expect(address.address_category.ac_name).to eq("社内")
-      expect(address.address_tels.sole.at_number).to eq("09011112222")
+      expect(address.address_tels.sole.at_number).to eq("090-1111-2222")
     end
 
     it "reuses the same address on subsequent updates rather than creating a second one" do
@@ -83,7 +83,7 @@ RSpec.describe "Api::V1::EmployeeAddresses", type: :request do
       employee = create(:user)
 
       patch "/api/v1/users/#{employee.user_code}/address",
-        params: { address_tels_attributes: [ { at_number: "0311112222", at_label_type: "main", at_sort: 1 } ] },
+        params: { address_tels_attributes: [ { at_number: "03-1111-2222", at_label_type: "main", at_sort: 1 } ] },
         headers: authenticated_headers(session_token), as: :json
 
       expect(response).to have_http_status(:unprocessable_entity)
@@ -95,14 +95,14 @@ RSpec.describe "Api::V1::EmployeeAddresses", type: :request do
       patch "/api/v1/users/#{employee.user_code}/address",
         params: {
           address_tels_attributes: [
-            { at_number: "09011112222", at_label_type: "mobile", at_sort: 1 },
-            { at_number: "0311112222", at_label_type: "home", at_sort: 2, is_emergency: true }
+            { at_number: "090-1111-2222", at_label_type: "mobile", at_sort: 1 },
+            { at_number: "03-1111-2222", at_label_type: "home", at_sort: 2, is_emergency: true }
           ]
         }, headers: authenticated_headers(session_token), as: :json
 
       expect(response).to have_http_status(:ok)
       address = Address.find_by(address_user_code: employee.user_code)
-      expect(address.address_tels.find_by(is_emergency: true).at_number).to eq("0311112222")
+      expect(address.address_tels.find_by(is_emergency: true).at_number).to eq("03-1111-2222")
     end
 
     it "rejects destroying the primary mobile tel when a non-mobile tel would become primary" do

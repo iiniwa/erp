@@ -12,6 +12,7 @@ class AddressTel < ApplicationRecord
   }, validate: true
 
   validates :at_number, presence: true
+  validate :at_number_format
   validates :at_label_free, presence: true, if: :free?
   # DB-level enforcement (the emergency_slot generated column + unique index
   # in the address_tels migration) is what actually guarantees this under
@@ -45,6 +46,12 @@ class AddressTel < ApplicationRecord
   after_destroy :promote_next_primary
 
   private
+
+  def at_number_format
+    return if at_number.blank? || PhoneNumberFormat.valid?(at_number)
+
+    errors.add(:at_number, "の形式が正しくありません（例: 090-1234-5678）。区切りはハイフンのみ使用できます")
+  end
 
   # Direct model-level destroys (e.g. `AddressTel#destroy!` called on its
   # own, outside Address's nested-attributes update) bypass

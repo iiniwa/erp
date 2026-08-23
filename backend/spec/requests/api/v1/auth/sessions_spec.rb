@@ -28,6 +28,17 @@ RSpec.describe "Api::V1::Auth::Sessions", type: :request do
       expect(json["user"]["user_code"]).to eq(user.user_code)
     end
 
+    # Issue #32: at_number is stored hyphenated (e.g. "090-0000-0000"),
+    # but login must also accept the hyphen-free form of the same number.
+    it "logs in with the primary mobile number with hyphens stripped" do
+      post "/api/v1/auth/session",
+        params: { identifier: primary_tel.at_number.delete("-"), password: "himitsu" },
+        headers: internal_api_headers, as: :json
+
+      expect(response).to have_http_status(:created)
+      expect(json["user"]["user_code"]).to eq(user.user_code)
+    end
+
     it "rejects an unknown identifier" do
       post "/api/v1/auth/session", params: { identifier: "nobody", password: "himitsu" },
         headers: internal_api_headers, as: :json

@@ -1,4 +1,6 @@
 import { z } from "zod";
+import { isValidPhoneNumber, PHONE_NUMBER_ERROR_MESSAGE } from "@/lib/validation/phone-number";
+import { isValidPostalCode, POSTAL_CODE_ERROR_MESSAGE } from "@/lib/validation/postal-code";
 
 export const AT_LABEL_TYPE_VALUES = ["mobile", "main", "fax", "home", "free"] as const;
 
@@ -38,6 +40,13 @@ const telSchema = z
         message: "自由入力ラベルを入力してください",
       });
     }
+    if (tel.at_number && !isValidPhoneNumber(tel.at_number)) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["at_number"],
+        message: PHONE_NUMBER_ERROR_MESSAGE,
+      });
+    }
   });
 
 const emailSchema = z.object({
@@ -57,7 +66,11 @@ export const addressSchema = z.object({
   address_name: z.string().min(1, "名称を入力してください"),
   address_ruby: z.string().min(1, "ふりがな（ひらがな）を入力してください"),
   address_contact_name: z.string().optional().or(z.literal("")),
-  address_post: z.string().optional().or(z.literal("")),
+  address_post: z
+    .string()
+    .optional()
+    .or(z.literal(""))
+    .refine((value) => !value || isValidPostalCode(value), { message: POSTAL_CODE_ERROR_MESSAGE }),
   address_residence: z.string().optional().or(z.literal("")),
   address_memo: z.string().optional().or(z.literal("")),
   address_tels: z.array(telSchema),

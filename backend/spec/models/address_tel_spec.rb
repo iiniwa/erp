@@ -169,4 +169,34 @@ RSpec.describe AddressTel do
       expect(tel).to be_valid
     end
   end
+
+  describe "at_number format (Issue #32)" do
+    it "accepts a mobile number (3-4-4)" do
+      expect(build(:address_tel, at_number: "090-1234-5678")).to be_valid
+    end
+
+    it "accepts a landline number (variable area code, 10 digits total)" do
+      expect(build(:address_tel, at_number: "03-1234-5678")).to be_valid
+    end
+
+    it "accepts a freedial number (4-3-3)" do
+      expect(build(:address_tel, at_number: "0120-123-456")).to be_valid
+    end
+
+    it "accepts an international number with a country code" do
+      expect(build(:address_tel, at_number: "+1-415-555-0100")).to be_valid
+    end
+
+    it "rejects a number with no hyphens" do
+      expect(build(:address_tel, at_number: "09012345678")).not_to be_valid
+    end
+
+    it "rejects a number using parentheses" do
+      expect(build(:address_tel, at_number: "(090)1234-5678")).not_to be_valid
+    end
+
+    it "rejects a landline-shaped number with the wrong total digit count" do
+      expect(build(:address_tel, at_number: "03-12-5678")).not_to be_valid
+    end
+  end
 end

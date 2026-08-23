@@ -13,7 +13,7 @@ RSpec.describe "Api::V1::Addresses", type: :request do
   describe "GET /api/v1/addresses" do
     it "lists addresses with their tels/emails joined, excluding soft-deleted ones" do
       active = create(:address, address_category: category)
-      create(:address_tel, address: active, at_number: "09011112222", at_sort: 1)
+      create(:address_tel, address: active, at_number: "090-1111-2222", at_sort: 1)
       create(:address_email, address: active, ae_email: "a@example.com", ae_sort: 1)
       deleted = create(:address, address_category: category)
       deleted.soft_delete!
@@ -26,7 +26,7 @@ RSpec.describe "Api::V1::Addresses", type: :request do
       expect(ids).not_to include(deleted.address_id)
 
       found = json["addresses"].find { |a| a["address_id"] == active.address_id }
-      expect(found["address_tels"].first["at_number"]).to eq("09011112222")
+      expect(found["address_tels"].first["at_number"]).to eq("090-1111-2222")
       expect(found["address_emails"].first["ae_email"]).to eq("a@example.com")
     end
 
@@ -87,7 +87,7 @@ RSpec.describe "Api::V1::Addresses", type: :request do
         address_category_id: category.ac_id,
         address_name: "取引先株式会社",
         address_ruby: "とりひきさきかぶしきがいしゃ",
-        address_tels_attributes: [ { at_number: "0311112222", at_label_type: "main", at_sort: 1 } ],
+        address_tels_attributes: [ { at_number: "03-1111-2222", at_label_type: "main", at_sort: 1 } ],
         address_emails_attributes: [ { ae_email: "contact@example.com", ae_sort: 1 } ]
       }
     end
@@ -115,7 +115,7 @@ RSpec.describe "Api::V1::Addresses", type: :request do
 
     it "rejects an emergency-contact tel on a non-employee address" do
       params = valid_params.merge(
-        address_tels_attributes: [ { at_number: "0311112222", at_label_type: "main", at_sort: 1, is_emergency: true } ]
+        address_tels_attributes: [ { at_number: "03-1111-2222", at_label_type: "main", at_sort: 1, is_emergency: true } ]
       )
 
       post "/api/v1/addresses", params: params, headers: authenticated_headers(session_token), as: :json
@@ -132,13 +132,13 @@ RSpec.describe "Api::V1::Addresses", type: :request do
 
       patch "/api/v1/addresses/#{address.address_id}", params: {
         address_name: "更新後の名称",
-        address_tels_attributes: [ { id: tel.at_id, at_number: "08099998888" } ],
+        address_tels_attributes: [ { id: tel.at_id, at_number: "080-9999-8888" } ],
         address_emails_attributes: [ { id: email.ae_id, _destroy: true } ]
       }, headers: authenticated_headers(session_token), as: :json
 
       expect(response).to have_http_status(:ok)
       expect(address.reload.address_name).to eq("更新後の名称")
-      expect(tel.reload.at_number).to eq("08099998888")
+      expect(tel.reload.at_number).to eq("080-9999-8888")
       expect(AddressEmail.exists?(email.ae_id)).to be false
     end
 

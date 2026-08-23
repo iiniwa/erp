@@ -56,6 +56,7 @@ export function TelFieldRow<T extends TelEmailFormShape>({
         <Input
           id={`address_tels.${index}.at_number`}
           label="電話番号"
+          placeholder="090-1234-5678"
           error={telErrors?.at_number?.message}
           {...register(`address_tels.${index}.at_number` as Path<T>)}
         />

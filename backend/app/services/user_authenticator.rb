@@ -41,12 +41,18 @@ class UserAuthenticator
 
   # Only the primary (at_sort = 1) mobile number of the address book entry
   # linked back to a user (address_user_code) counts as a login identifier
-  # (spec section 3.1).
+  # (spec section 3.1). at_number is stored hyphenated (Issue #32), but the
+  # identifier is matched with or without hyphens so a user can log in by
+  # typing the number either way.
   def find_by_primary_mobile_number(phone_number)
+    normalized = phone_number.delete("-")
+    return nil if normalized.blank?
+
     address_tel = AddressTel
       .joins(:address)
-      .where(at_number: phone_number, at_sort: 1, at_label_type: AddressTel.at_label_types[:mobile])
+      .where(at_sort: 1, at_label_type: AddressTel.at_label_types[:mobile])
       .where.not(addresses: { address_user_code: nil })
+      .where("REPLACE(at_number, '-', '') = ?", normalized)
       .first
 
     return nil unless address_tel

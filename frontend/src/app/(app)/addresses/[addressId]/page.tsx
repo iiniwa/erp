@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { notFound } from "next/navigation";
 import { fetchAddress } from "@/lib/api/addresses";
 import { telLabelText } from "@/lib/validation/address";
+import { formatPostalCodeForDisplay } from "@/lib/validation/postal-code";
 import LinkButton from "@/components/ui/LinkButton";
 import Card from "@/components/ui/Card";
 import AddressActions from "@/features/addresses/AddressActions";
@@ -65,7 +66,9 @@ export default async function AddressDetailPage({
           <Field label="ふりがな">{address.address_ruby}</Field>
           <Field label="カテゴリ">{address.address_category_name}</Field>
           <Field label="担当者名">{address.address_contact_name ?? "未設定"}</Field>
-          <Field label="郵便番号">{address.address_post ?? "未設定"}</Field>
+          <Field label="郵便番号">
+            {formatPostalCodeForDisplay(address.address_post) || "未設定"}
+          </Field>
           <Field label="住所">{address.address_residence ?? "未設定"}</Field>
           <Field label="備考">{address.address_memo ?? "未設定"}</Field>
         </dl>

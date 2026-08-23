@@ -57,7 +57,7 @@ begin
       )
 
       address.address_tels.create!(
-        at_number: ENV.fetch("SEED_ADMIN_MOBILE_NUMBER", "00000000000"),
+        at_number: ENV.fetch("SEED_ADMIN_MOBILE_NUMBER", "090-0000-0000"),
         at_label_type: :mobile,
         at_sort: 1
       )

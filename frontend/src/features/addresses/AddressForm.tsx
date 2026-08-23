@@ -5,6 +5,10 @@ import { useRouter } from "next/navigation";
 import { useFieldArray, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { addressSchema, type AddressFormValues } from "@/lib/validation/address";
+import {
+  formatPostalCodeForDisplay,
+  normalizePostalCodeForSubmit,
+} from "@/lib/validation/postal-code";
 import type { AddressBookEntry, AddressCategory } from "@/lib/api/addresses";
 import { TelFieldRow, EmailFieldRow } from "@/features/addresses/TelEmailFields";
 import { useToast } from "@/components/ui/ToastProvider";
@@ -59,7 +63,7 @@ export default function AddressForm({ mode, address, categories }: AddressFormPr
       address_name: address?.address_name ?? "",
       address_ruby: address?.address_ruby ?? "",
       address_contact_name: address?.address_contact_name ?? "",
-      address_post: address?.address_post ?? "",
+      address_post: formatPostalCodeForDisplay(address?.address_post),
       address_residence: address?.address_residence ?? "",
       address_memo: address?.address_memo ?? "",
       address_tels: address?.address_tels.map(toDefaultTel) ?? [],
@@ -122,7 +126,7 @@ export default function AddressForm({ mode, address, categories }: AddressFormPr
       address_name: values.address_name,
       address_ruby: values.address_ruby,
       address_contact_name: values.address_contact_name || null,
-      address_post: values.address_post || null,
+      address_post: values.address_post ? normalizePostalCodeForSubmit(values.address_post) : null,
       address_residence: values.address_residence || null,
       address_memo: values.address_memo || null,
       address_tels_attributes: values.address_tels,
@@ -222,6 +226,7 @@ export default function AddressForm({ mode, address, categories }: AddressFormPr
         <Input
           id="address_post"
           label="郵便番号（任意）"
+          placeholder="100-0001"
           error={errors.address_post?.message}
           {...register("address_post")}
         />
