@@ -78,7 +78,12 @@ module Api
           user_familyname: user.user_familyname,
           user_firstname: user.user_firstname,
           user_must_change_password: user.user_must_change_password,
-          permissions: permissions_for(user)
+          permissions: permissions_for(user),
+          # Branding only (spec section 10's system_name), not the rest of
+          # t.system: every signed-in user needs this to render the
+          # header/footer, but SystemSettingsController stays system_admin
+          # -only for everything else (bank info, invoice numbers, etc.).
+          system_name: SystemSetting.instance.system_name
         }
       end
 

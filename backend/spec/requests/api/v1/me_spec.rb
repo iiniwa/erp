@@ -12,6 +12,17 @@ RSpec.describe "Api::V1::Me", type: :request do
       expect(json["user"]["user_code"]).to eq(user.user_code)
     end
 
+    it "returns the configured system_name for a non-system_admin, without needing settings access" do
+      SystemSetting.instance.update!(system_name: "いいにわERP")
+      user = create(:user, user_type: :general, user_must_change_password: false)
+      _session, raw_token = Session.issue_for(user: user, mode: :normal)
+
+      get "/api/v1/me", headers: authenticated_headers(raw_token)
+
+      expect(response).to have_http_status(:ok)
+      expect(json["user"]["system_name"]).to eq("いいにわERP")
+    end
+
     it "blocks access until the forced first-login password reset is done" do
       user = create(:user, user_must_change_password: true)
       _session, raw_token = Session.issue_for(user: user, mode: :normal)

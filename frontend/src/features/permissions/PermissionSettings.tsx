@@ -172,6 +172,7 @@ export default function PermissionSettings({
             value={newRoleName}
             onChange={(event) => setNewRoleName(event.target.value)}
             placeholder="役割名（例: 一般スタッフ）"
+            aria-label="役割名"
             autoComplete="off"
             className="min-h-11 rounded-md border border-brand-gray-300 px-3 py-2 text-sm focus:border-brand-green-500 focus:outline-none focus:ring-1 focus:ring-brand-green-500"
           />

@@ -42,6 +42,15 @@ module Api
         else
           render json: { errors: user.errors.full_messages }, status: :unprocessable_entity
         end
+      # User#single_system_admin already catches this on every normal
+      # request, but two concurrent creates can both pass that
+      # application-level check before either commits; the DB's
+      # system_admin_slot unique index is the actual backstop for that
+      # race, so its violation is translated to the same 422 rather than
+      # bubbling up as an unhandled 500.
+      rescue ActiveRecord::RecordNotUnique
+        render json: { errors: [ "システム管理者は既に登録されているため、これ以上登録できません" ] },
+          status: :unprocessable_entity
       end
 
       # Deliberately excludes user_type: retirement goes through #retire

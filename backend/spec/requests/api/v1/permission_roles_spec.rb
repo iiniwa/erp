@@ -54,6 +54,16 @@ RSpec.describe "Api::V1::PermissionRoles", type: :request do
   end
 
   describe "PATCH /api/v1/permission_roles/:id" do
+    it "updates a permission role for a system_admin" do
+      role = create(:permission_role, role_name: "旧名称")
+
+      patch "/api/v1/permission_roles/#{role.role_id}", params: { role_name: "新名称" },
+        headers: authenticated_headers(session_token), as: :json
+
+      expect(response).to have_http_status(:ok)
+      expect(role.reload.role_name).to eq("新名称")
+    end
+
     it "is forbidden for a non-system_admin" do
       role = create(:permission_role)
       general_user = create(:user, user_type: :general, user_must_change_password: false)

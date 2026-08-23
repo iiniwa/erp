@@ -109,6 +109,21 @@ RSpec.describe "Api::V1::Users", type: :request do
       expect(response).to have_http_status(:unprocessable_entity)
       expect(json["errors"]).to be_present
     end
+
+    it "returns 422, not 500, if two concurrent creates both pass validation before either commits" do
+      create(:user, user_type: :system_admin)
+      # Simulates the race: single_system_admin's SELECT ran before the
+      # other request's INSERT committed, so this request's own
+      # application-level check passes too, leaving the DB's
+      # system_admin_slot unique index as the only thing left to catch it.
+      allow_any_instance_of(User).to receive(:single_system_admin)
+
+      post "/api/v1/users", params: valid_params.merge(user_type: "system_admin"),
+        headers: authenticated_headers(session_token), as: :json
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(json["errors"]).to be_present
+    end
   end
 
   describe "PATCH /api/v1/users/:user_code" do
