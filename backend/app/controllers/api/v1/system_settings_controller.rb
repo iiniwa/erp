@@ -124,7 +124,8 @@ module Api
 
       def system_setting_params
         params.permit(
-          :system_name, :company_name, :company_post, :company_address, :company_tel, :company_email,
+          :system_name, :company_name, :company_post, :company_address, :company_tel, :company_fax,
+          :company_toll_free, :company_email,
           :company_invoice_number, :company_corporate_number, :representative_position, :representative_name,
           :bank_name, :bank_branch_name, :bank_account_type, :bank_account_number, :bank_account_holder,
           :default_tax_rate, :fiscal_year_end_month, :login_lockout_count
@@ -133,7 +134,8 @@ module Api
 
       def serialize(system_setting)
         system_setting.attributes.symbolize_keys.slice(
-          :system_name, :company_name, :company_post, :company_address, :company_tel, :company_email,
+          :system_name, :company_name, :company_post, :company_address, :company_tel, :company_fax,
+          :company_toll_free, :company_email,
           :company_invoice_number, :company_corporate_number, :representative_position, :representative_name,
           :bank_name, :bank_branch_name, :bank_account_type, :bank_account_number, :bank_account_holder,
           :default_tax_rate, :fiscal_year_end_month, :login_lockout_count, :updated_at, :updated_by

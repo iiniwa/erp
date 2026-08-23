@@ -42,6 +42,15 @@ module Api
         else
           render json: { errors: user.errors.full_messages }, status: :unprocessable_entity
         end
+      # User#single_system_admin already catches this on every normal
+      # request, but two concurrent creates can both pass that
+      # application-level check before either commits; the DB's
+      # system_admin_slot unique index is the actual backstop for that
+      # race, so its violation is translated to the same 422 rather than
+      # bubbling up as an unhandled 500.
+      rescue ActiveRecord::RecordNotUnique
+        render json: { errors: [ "システム管理者は既に登録されているため、これ以上登録できません" ] },
+          status: :unprocessable_entity
       end
 
       # Deliberately excludes user_type: retirement goes through #retire
@@ -98,14 +107,14 @@ module Api
 
       def create_params
         params.permit(
-          :user_id, :user_type, :user_familyname, :user_firstname,
+          :user_id, :user_type, :role_id, :user_familyname, :user_firstname,
           :user_familyname_ruby, :user_firstname_ruby, :user_join_date
         )
       end
 
       def update_params
         params.permit(
-          :user_id, :user_familyname, :user_firstname,
+          :user_id, :role_id, :user_familyname, :user_firstname,
           :user_familyname_ruby, :user_firstname_ruby, :user_join_date
         )
       end
@@ -121,6 +130,8 @@ module Api
           user_code: user.user_code,
           user_id: user.user_id,
           user_type: user.user_type,
+          role_id: user.role_id,
+          role_name: user.permission_role&.role_name,
           user_familyname: user.user_familyname,
           user_firstname: user.user_firstname,
           user_familyname_ruby: user.user_familyname_ruby,

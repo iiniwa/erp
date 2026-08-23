@@ -7,7 +7,7 @@ import Modal from "@/components/ui/Modal";
 import { useToast } from "@/components/ui/ToastProvider";
 import type { CurrentUser } from "@/lib/session";
 
-export default function Header({ user }: { user: CurrentUser }) {
+export default function Header({ user, systemName }: { user: CurrentUser; systemName: string }) {
   const router = useRouter();
   const { showToast } = useToast();
   const [confirmingLogout, setConfirmingLogout] = useState(false);
@@ -37,7 +37,7 @@ export default function Header({ user }: { user: CurrentUser }) {
     <header className="border-b border-brand-gray-200 bg-white">
       <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-3">
         <Link href="/" className="text-lg font-semibold text-brand-gray-900">
-          ERPシステム
+          {systemName}
         </Link>
         <div className="flex items-center gap-4">
           <span className="text-sm text-brand-gray-700">

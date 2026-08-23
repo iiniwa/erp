@@ -28,13 +28,16 @@ RSpec.describe "Api::V1::PermissionMasters", type: :request do
   end
 
   describe "POST /api/v1/permission_masters" do
-    it "creates a permission master and backfills a role_permission row for every user_type" do
+    it "creates a permission master and backfills a role_permission row for every existing role" do
+      role_a = create(:permission_role)
+      role_b = create(:permission_role)
+
       post "/api/v1/permission_masters", params: { pm_code: "attendance", pm_name: "勤怠管理", pm_sort: 3 },
         headers: authenticated_headers(session_token), as: :json
 
       expect(response).to have_http_status(:created)
       pm = PermissionMaster.find_by(pm_code: "attendance")
-      expect(RolePermission.rp_user_types.keys.all? { |t| pm.role_permissions.exists?(rp_user_type: t) }).to be true
+      expect([ role_a.role_id, role_b.role_id ].all? { |id| pm.role_permissions.exists?(role_id: id) }).to be true
     end
 
     it "is forbidden for a non-system_admin" do

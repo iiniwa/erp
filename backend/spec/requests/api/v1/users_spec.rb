@@ -7,7 +7,7 @@ RSpec.describe "Api::V1::Users", type: :request do
     raw_token
   end
 
-  before { grant_permission!(:general, "user_manage") }
+  before { grant_permission!(admin, "user_manage") }
 
   describe "GET /api/v1/users" do
     it "lists users, excluding soft-deleted ones" do
@@ -47,7 +47,7 @@ RSpec.describe "Api::V1::Users", type: :request do
     end
 
     it "blocks a role with no user_manage permission" do
-      no_permission_user = create(:user, user_type: :part_time, user_must_change_password: false)
+      no_permission_user = create(:user, user_type: :general, user_must_change_password: false)
       _session, token = Session.issue_for(user: no_permission_user, mode: :normal)
 
       get "/api/v1/users", headers: authenticated_headers(token)
@@ -109,6 +109,21 @@ RSpec.describe "Api::V1::Users", type: :request do
       expect(response).to have_http_status(:unprocessable_entity)
       expect(json["errors"]).to be_present
     end
+
+    it "returns 422, not 500, if two concurrent creates both pass validation before either commits" do
+      create(:user, user_type: :system_admin)
+      # Simulates the race: single_system_admin's SELECT ran before the
+      # other request's INSERT committed, so this request's own
+      # application-level check passes too, leaving the DB's
+      # system_admin_slot unique index as the only thing left to catch it.
+      allow_any_instance_of(User).to receive(:single_system_admin)
+
+      post "/api/v1/users", params: valid_params.merge(user_type: "system_admin"),
+        headers: authenticated_headers(session_token), as: :json
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(json["errors"]).to be_present
+    end
   end
 
   describe "PATCH /api/v1/users/:user_code" do
@@ -164,7 +179,6 @@ RSpec.describe "Api::V1::Users", type: :request do
     end
 
     it "refuses to delete the fixed system administrator, even by themselves" do
-      grant_permission!(:system_admin, "user_manage")
       sysadmin = create(:user, user_type: :system_admin, user_must_change_password: false)
       _session, sysadmin_token = Session.issue_for(user: sysadmin, mode: :normal)
 

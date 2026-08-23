@@ -1,6 +1,6 @@
 FactoryBot.define do
   factory :role_permission do
     association :permission_master
-    rp_user_type { :general }
+    association :permission_role
   end
 end

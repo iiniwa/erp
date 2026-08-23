@@ -9,6 +9,8 @@ export type SystemSetting = {
   company_post: string | null;
   company_address: string | null;
   company_tel: string | null;
+  company_fax: string | null;
+  company_toll_free: string | null;
   company_email: string | null;
   company_invoice_number: string | null;
   company_corporate_number: string | null;

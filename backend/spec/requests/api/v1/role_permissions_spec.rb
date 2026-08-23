@@ -9,13 +9,15 @@ RSpec.describe "Api::V1::RolePermissions", type: :request do
 
   describe "GET /api/v1/role_permissions" do
     it "lists the full matrix for a system_admin" do
+      role_a = create(:permission_role)
+      role_b = create(:permission_role)
       create(:permission_master, pm_code: "user_manage")
 
       get "/api/v1/role_permissions", headers: authenticated_headers(session_token)
 
       expect(response).to have_http_status(:ok)
-      user_types = json["role_permissions"].select { |rp| rp["pm_code"] == "user_manage" }.map { |rp| rp["rp_user_type"] }
-      expect(user_types).to match_array(RolePermission.rp_user_types.keys)
+      role_ids = json["role_permissions"].select { |rp| rp["pm_code"] == "user_manage" }.map { |rp| rp["role_id"] }
+      expect(role_ids).to match_array([ role_a.role_id, role_b.role_id ])
     end
 
     it "is forbidden for a non-system_admin" do
@@ -30,8 +32,9 @@ RSpec.describe "Api::V1::RolePermissions", type: :request do
 
   describe "PATCH /api/v1/role_permissions/:id" do
     it "updates the access flags for one role x feature cell" do
+      role = create(:permission_role)
       permission_master = create(:permission_master, pm_code: "address_book")
-      role_permission = permission_master.role_permissions.find_by(rp_user_type: :general)
+      role_permission = permission_master.role_permissions.find_by(permission_role: role)
 
       patch "/api/v1/role_permissions/#{role_permission.rp_id}",
         params: { rp_can_view: true, rp_can_create: true },
@@ -44,8 +47,9 @@ RSpec.describe "Api::V1::RolePermissions", type: :request do
     end
 
     it "is forbidden for a non-system_admin" do
+      role = create(:permission_role)
       permission_master = create(:permission_master, pm_code: "address_book")
-      role_permission = permission_master.role_permissions.find_by(rp_user_type: :general)
+      role_permission = permission_master.role_permissions.find_by(permission_role: role)
       general_user = create(:user, user_type: :general, user_must_change_password: false)
       _session, token = Session.issue_for(user: general_user, mode: :normal)
 

@@ -44,6 +44,7 @@ export type CurrentUser = {
   user_firstname: string;
   user_must_change_password: boolean;
   permissions: Record<string, FeaturePermission>;
+  system_name: string | null;
 };
 
 // Returns null both when there is no session and when the password reset

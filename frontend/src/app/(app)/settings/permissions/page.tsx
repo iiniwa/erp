@@ -1,5 +1,9 @@
 import { redirect } from "next/navigation";
-import { fetchPermissionMasters, fetchRolePermissions } from "@/lib/api/permissions";
+import {
+  fetchPermissionMasters,
+  fetchPermissionRoles,
+  fetchRolePermissions,
+} from "@/lib/api/permissions";
 import { getCurrentUser } from "@/lib/session";
 import PermissionSettings from "@/features/permissions/PermissionSettings";
 
@@ -13,15 +17,20 @@ export default async function PermissionSettingsPage() {
     redirect("/");
   }
 
-  const [permissionMasters, rolePermissions] = await Promise.all([
+  const [permissionMasters, permissionRoles, rolePermissions] = await Promise.all([
     fetchPermissionMasters(),
+    fetchPermissionRoles(),
     fetchRolePermissions(),
   ]);
 
   return (
     <div>
       <h1 className="mb-6 text-2xl font-semibold text-brand-gray-900">権限管理</h1>
-      <PermissionSettings permissionMasters={permissionMasters} rolePermissions={rolePermissions} />
+      <PermissionSettings
+        permissionMasters={permissionMasters}
+        permissionRoles={permissionRoles}
+        rolePermissions={rolePermissions}
+      />
     </div>
   );
 }

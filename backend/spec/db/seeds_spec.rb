@@ -19,20 +19,13 @@ RSpec.describe "db/seeds.rb" do
     expect { load Rails.root.join("db/seeds.rb") }.not_to change(User, :count)
   end
 
-  it "grants system_admin full access and other active roles view-only, by default" do
+  it "seeds a view-only starter role for the default features" do
     load Rails.root.join("db/seeds.rb")
 
     user_manage = PermissionMaster.find_by!(pm_code: "user_manage")
-    admin_permission = user_manage.role_permissions.find_by(rp_user_type: :system_admin)
-    expect(admin_permission).to have_attributes(
-      rp_can_view: true, rp_can_create: true, rp_can_update: true, rp_can_delete: true
-    )
-
-    general_permission = user_manage.role_permissions.find_by(rp_user_type: :general)
-    expect(general_permission).to have_attributes(rp_can_view: true, rp_can_create: false)
-
-    retired_permission = user_manage.role_permissions.find_by(rp_user_type: :retired)
-    expect(retired_permission).to have_attributes(rp_can_view: false, rp_can_create: false)
+    staff_role = PermissionRole.find_by!(role_name: "スタッフ")
+    staff_permission = user_manage.role_permissions.find_by(permission_role: staff_role)
+    expect(staff_permission).to have_attributes(rp_can_view: true, rp_can_create: false)
   end
 
   it "does not create a duplicate admin if the existing one was soft-deleted" do

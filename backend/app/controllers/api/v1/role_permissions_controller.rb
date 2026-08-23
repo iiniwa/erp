@@ -1,9 +1,10 @@
 module Api
   module V1
     # Role x feature permission matrix (spec sections 4, 5.8). Every
-    # (user_type, permission_master) cell is guaranteed to exist by
-    # PermissionMaster#create_role_permissions_for_every_user_type, so
-    # #index can just list what's there rather than backfilling gaps.
+    # (role, permission_master) cell is guaranteed to exist by
+    # PermissionMaster#create_role_permissions_for_every_role and
+    # PermissionRole#create_role_permissions_for_every_feature, so #index
+    # can just list what's there rather than backfilling gaps.
     class RolePermissionsController < BaseController
       before_action :authenticate_session!
       before_action :enforce_password_reset!
@@ -12,7 +13,7 @@ module Api
 
       def index
         authorize RolePermission
-        role_permissions = RolePermission.includes(:permission_master).order(:pm_id, :rp_user_type)
+        role_permissions = RolePermission.includes(:permission_master, :permission_role).order(:pm_id, :role_id)
         render json: { role_permissions: role_permissions.map { |rp| serialize(rp) } }
       end
 
@@ -40,7 +41,8 @@ module Api
       def serialize(rp)
         {
           rp_id: rp.rp_id,
-          rp_user_type: rp.rp_user_type,
+          role_id: rp.role_id,
+          role_name: rp.permission_role.role_name,
           pm_id: rp.pm_id,
           pm_code: rp.permission_master.pm_code,
           pm_name: rp.permission_master.pm_name,
