@@ -150,6 +150,7 @@ export default function EmployeeAddressForm({
           <textarea
             id="address_memo"
             rows={3}
+            autoComplete="off"
             className="w-full rounded-md border border-brand-gray-300 px-3 py-2 focus:border-brand-green-500 focus:outline-none focus:ring-1 focus:ring-brand-green-500"
             {...register("address_memo")}
           />

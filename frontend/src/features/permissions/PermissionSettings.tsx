@@ -172,6 +172,7 @@ export default function PermissionSettings({
             value={newRoleName}
             onChange={(event) => setNewRoleName(event.target.value)}
             placeholder="役割名（例: 一般スタッフ）"
+            autoComplete="off"
             className="min-h-11 rounded-md border border-brand-gray-300 px-3 py-2 text-sm focus:border-brand-green-500 focus:outline-none focus:ring-1 focus:ring-brand-green-500"
           />
           <Button type="button" variant="secondary" disabled={addingRole} onClick={handleAddRole}>
@@ -205,6 +206,7 @@ export default function PermissionSettings({
             value={newCode}
             onChange={(event) => setNewCode(event.target.value)}
             placeholder="機能コード（例: attendance）"
+            autoComplete="off"
             className="min-h-11 rounded-md border border-brand-gray-300 px-3 py-2 text-sm focus:border-brand-green-500 focus:outline-none focus:ring-1 focus:ring-brand-green-500"
           />
           <input
@@ -212,6 +214,7 @@ export default function PermissionSettings({
             value={newName}
             onChange={(event) => setNewName(event.target.value)}
             placeholder="表示名（例: 勤怠管理）"
+            autoComplete="off"
             className="min-h-11 rounded-md border border-brand-gray-300 px-3 py-2 text-sm focus:border-brand-green-500 focus:outline-none focus:ring-1 focus:ring-brand-green-500"
           />
           <Button
