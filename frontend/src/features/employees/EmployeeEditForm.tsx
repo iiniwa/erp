@@ -7,7 +7,6 @@ import {
   updateEmployeeSchema,
   decodeKubun,
   encodeKubun,
-  KUBUN_GENERAL,
   type UpdateEmployeeFormValues,
 } from "@/lib/validation/employee";
 import { useToast } from "@/components/ui/ToastProvider";
@@ -23,6 +22,15 @@ export default function EmployeeEditForm({ employee, permissionRoles }: Props) {
   const router = useRouter();
   const { showToast } = useToast();
   const isSystemAdmin = employee.user_type === "system_admin";
+  // The dropdown only ever offers システム管理者 or a role from the
+  // table (see PermissionSettings) — there is no third "一般" bucket to
+  // fall back to. If this employee somehow has no role assigned (e.g.
+  // their role was since deleted), encodeKubun's "general" sentinel
+  // wouldn't match any rendered <option>, and a native <select> would
+  // silently default to the first one — so treat that case as unset and
+  // force an explicit re-selection instead.
+  const encodedKubun = encodeKubun(employee);
+  const hasMatchingRole = permissionRoles.some((role) => role.role_id.toString() === encodedKubun);
   const {
     register,
     handleSubmit,
@@ -36,7 +44,7 @@ export default function EmployeeEditForm({ employee, permissionRoles }: Props) {
       user_firstname_ruby: employee.user_firstname_ruby,
       user_join_date: employee.user_join_date ?? "",
       user_id: employee.user_id ?? "",
-      kubun: encodeKubun(employee),
+      kubun: isSystemAdmin || hasMatchingRole ? encodedKubun : "",
     },
   });
 
@@ -125,7 +133,7 @@ export default function EmployeeEditForm({ employee, permissionRoles }: Props) {
               className="min-h-11 w-full rounded-md border border-brand-gray-300 px-3 py-2 focus:border-brand-green-500 focus:outline-none focus:ring-1 focus:ring-brand-green-500"
               {...register("kubun")}
             >
-              <option value={KUBUN_GENERAL}>一般（役割未設定）</option>
+              {!hasMatchingRole && <option value="">選択してください</option>}
               {permissionRoles.map((role) => (
                 <option key={role.role_id} value={role.role_id}>
                   {role.role_name}

@@ -6,7 +6,6 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import {
   createEmployeeSchema,
   decodeKubun,
-  KUBUN_GENERAL,
   KUBUN_SYSTEM_ADMIN,
   type CreateEmployeeFormValues,
 } from "@/lib/validation/employee";
@@ -101,7 +100,6 @@ export default function EmployeeCreateForm({
           >
             <option value="">選択してください</option>
             <option value={KUBUN_SYSTEM_ADMIN}>システム管理者</option>
-            <option value={KUBUN_GENERAL}>一般（役割未設定）</option>
             {permissionRoles.map((role) => (
               <option key={role.role_id} value={role.role_id}>
                 {role.role_name}
