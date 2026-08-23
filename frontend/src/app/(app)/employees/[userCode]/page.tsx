@@ -61,7 +61,7 @@ export default async function EmployeeDetailPage({
       <Card className="mb-6">
         <div className="mb-3 flex items-center justify-between">
           <h2 className="font-medium text-brand-gray-900">アドレス帳情報</h2>
-          <LinkButton href={`/employees/${employee.user_code}/address`} variant="secondary">
+          <LinkButton href={`/employees/${employee.user_code}/edit`} variant="secondary">
             編集
           </LinkButton>
         </div>

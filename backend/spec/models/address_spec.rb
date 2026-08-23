@@ -28,7 +28,7 @@ RSpec.describe Address do
     it "rejects an employee address whose sort=1 tel is not mobile" do
       user = create(:user)
       address = build(:address, user: user)
-      address.address_tels.build(at_number: "0311112222", at_label_type: :main, at_sort: 1)
+      address.address_tels.build(at_number: "03-1111-2222", at_label_type: :main, at_sort: 1)
 
       expect(address).not_to be_valid
     end
@@ -36,15 +36,37 @@ RSpec.describe Address do
     it "accepts an employee address whose sort=1 tel is mobile" do
       user = create(:user)
       address = build(:address, user: user)
-      address.address_tels.build(at_number: "09000000000", at_label_type: :mobile, at_sort: 1)
+      address.address_tels.build(at_number: "090-0000-0000", at_label_type: :mobile, at_sort: 1)
 
       expect(address).to be_valid
     end
 
     it "does not enforce the mobile rule for non-employee addresses" do
       address = build(:address, user: nil)
-      address.address_tels.build(at_number: "0311112222", at_label_type: :main, at_sort: 1)
+      address.address_tels.build(at_number: "03-1111-2222", at_label_type: :main, at_sort: 1)
 
+      expect(address).to be_valid
+    end
+  end
+
+  describe "address_post format (Issue #32)" do
+    it "accepts a hyphen-free 7-digit value" do
+      address = build(:address, address_post: "1000001")
+      expect(address).to be_valid
+    end
+
+    it "normalizes a hyphenated XXX-XXXX value to hyphen-free on save" do
+      address = create(:address, address_post: "100-0001")
+      expect(address.reload.address_post).to eq("1000001")
+    end
+
+    it "rejects a value that isn't 7 digits" do
+      address = build(:address, address_post: "12345")
+      expect(address).not_to be_valid
+    end
+
+    it "allows a blank value" do
+      address = build(:address, address_post: nil)
       expect(address).to be_valid
     end
   end

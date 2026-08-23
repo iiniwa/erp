@@ -21,15 +21,29 @@ class Address < ApplicationRecord
   accepts_nested_attributes_for :address_emails, allow_destroy: true, reject_if: :all_blank
 
   validates :address_name, :address_ruby, presence: true
+  # Issue #32: stored hyphen-free (7 digits) regardless of how it was
+  # submitted; the frontend is what displays/accepts the hyphenated
+  # XXX-XXXX form (see lib/validation/postal-code.ts).
+  validates :address_post, format: { with: /\A\d{7}\z/, message: "は7桁の数字で入力してください" },
+    allow_blank: true
   validate :primary_tel_must_be_mobile_for_employee
   validate :only_one_emergency_tel
 
+  before_validation :normalize_address_post
   before_create :assign_address_id
 
   private
 
   def assign_address_id
     self.address_id ||= self.class.generate_code(type_code: "8")
+  end
+
+  # Accepts either the hyphenated XXX-XXXX form or bare digits on input
+  # (the frontend always sends hyphen-free per its own submit-time
+  # normalization, but this keeps the model itself correct for any other
+  # caller) and always stores hyphen-free.
+  def normalize_address_post
+    self.address_post = address_post.delete("-") if address_post.present?
   end
 
   # Spec section 5.4: an employee's primary contact number is always their

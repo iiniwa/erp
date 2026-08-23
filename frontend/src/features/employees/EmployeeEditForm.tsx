@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useForm } from "react-hook-form";
+import { useFieldArray, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
   updateEmployeeSchema,
@@ -9,16 +9,47 @@ import {
   encodeKubun,
   type UpdateEmployeeFormValues,
 } from "@/lib/validation/employee";
+import { TelFieldRow, EmailFieldRow } from "@/features/addresses/TelEmailFields";
+import {
+  formatPostalCodeForDisplay,
+  normalizePostalCodeForSubmit,
+} from "@/lib/validation/postal-code";
 import { useToast } from "@/components/ui/ToastProvider";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import Card from "@/components/ui/Card";
 import type { Employee } from "@/lib/api/employees";
+import type { EmployeeAddress } from "@/lib/api/employee-address";
 import type { PermissionRole } from "@/lib/api/permissions";
 
-type Props = { employee: Employee; permissionRoles: PermissionRole[] };
+type Props = { employee: Employee; address: EmployeeAddress; permissionRoles: PermissionRole[] };
 
-export default function EmployeeEditForm({ employee, permissionRoles }: Props) {
+function toDefaultTel(tel: EmployeeAddress["address_tels"][number]) {
+  return {
+    id: tel.at_id,
+    at_number: tel.at_number,
+    at_label_type:
+      tel.at_label_type as UpdateEmployeeFormValues["address_tels"][number]["at_label_type"],
+    at_label_free: tel.at_label_free ?? "",
+    at_sort: tel.at_sort,
+    is_emergency: tel.is_emergency,
+  };
+}
+
+function toDefaultEmail(email: EmployeeAddress["address_emails"][number]) {
+  return {
+    id: email.ae_id,
+    ae_email: email.ae_email,
+    ae_label: email.ae_label ?? "",
+    ae_sort: email.ae_sort,
+  };
+}
+
+// Issue #32: the employee's own address book entry (spec section 5.2) can
+// only ever be edited from here — this form now covers both the employee
+// profile and that address entry, submitted together, rather than the two
+// living on separate screens.
+export default function EmployeeEditForm({ employee, address, permissionRoles }: Props) {
   const router = useRouter();
   const { showToast } = useToast();
   const isSystemAdmin = employee.user_type === "system_admin";
@@ -33,7 +64,9 @@ export default function EmployeeEditForm({ employee, permissionRoles }: Props) {
   const hasMatchingRole = permissionRoles.some((role) => role.role_id.toString() === encodedKubun);
   const {
     register,
+    control,
     handleSubmit,
+    getValues,
     formState: { errors, isSubmitting },
   } = useForm<UpdateEmployeeFormValues>({
     resolver: zodResolver(updateEmployeeSchema),
@@ -45,24 +78,98 @@ export default function EmployeeEditForm({ employee, permissionRoles }: Props) {
       user_join_date: employee.user_join_date ?? "",
       user_id: employee.user_id ?? "",
       kubun: isSystemAdmin || hasMatchingRole ? encodedKubun : "",
+      address_contact_name: address.address_contact_name ?? "",
+      address_post: formatPostalCodeForDisplay(address.address_post),
+      address_residence: address.address_residence ?? "",
+      address_memo: address.address_memo ?? "",
+      address_tels: address.address_tels.map(toDefaultTel),
+      address_emails: address.address_emails.map(toDefaultEmail),
     },
   });
 
+  const telArray = useFieldArray({ control, name: "address_tels" });
+  const emailArray = useFieldArray({ control, name: "address_emails" });
+
+  function removeTel(index: number) {
+    const current = getValues(`address_tels.${index}`);
+    if (current.id) {
+      telArray.update(index, { ...current, _destroy: true });
+    } else {
+      telArray.remove(index);
+    }
+  }
+
+  function removeEmail(index: number) {
+    const current = getValues(`address_emails.${index}`);
+    if (current.id) {
+      emailArray.update(index, { ...current, _destroy: true });
+    } else {
+      emailArray.remove(index);
+    }
+  }
+
+  // Counts only surviving (non-destroyed) rows: removeTel/removeEmail
+  // mark an existing row's _destroy flag rather than removing it from the
+  // field array, so `fields.length` alone would count rows that won't
+  // exist after save and leave a gap in at_sort/ae_sort.
+  function nextSort(fields: { _destroy?: boolean }[]) {
+    return fields.filter((field) => !field._destroy).length + 1;
+  }
+
   async function onSubmit(values: UpdateEmployeeFormValues) {
-    const { kubun, ...rest } = values;
+    const {
+      kubun,
+      address_contact_name,
+      address_post,
+      address_residence,
+      address_memo,
+      address_tels,
+      address_emails,
+      ...profileFields
+    } = values;
+
+    // Two separate backend resources (t.users / t.address) behind one
+    // form — there's no cross-resource transaction, so a mid-way failure
+    // is possible. Submitting sequentially (profile first) rather than in
+    // parallel keeps the failure mode legible: if the address save fails,
+    // the profile save has already definitely succeeded, so the error
+    // says so explicitly instead of leaving the user unsure what, if
+    // anything, was saved.
     try {
-      const response = await fetch(`/api/employees/${employee.user_code}`, {
+      const profileResponse = await fetch(`/api/employees/${employee.user_code}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        // system_admin's 区分 is fixed (see the hidden field below) — only
-        // role_id is meaningful to send for them, and it stays null.
-        body: JSON.stringify({ ...rest, role_id: decodeKubun(kubun).role_id }),
+        body: JSON.stringify({ ...profileFields, role_id: decodeKubun(kubun).role_id }),
       });
+      const profileBody = await profileResponse.json().catch(() => ({}));
 
-      const body = await response.json().catch(() => ({}));
+      if (!profileResponse.ok) {
+        showToast(profileBody.errors?.join("、") ?? "更新に失敗しました。", "error");
+        return;
+      }
 
-      if (!response.ok) {
-        showToast(body.errors?.join("、") ?? "更新に失敗しました。", "error");
+      const addressResponse = await fetch(
+        `/api/employees/${encodeURIComponent(employee.user_code)}/address`,
+        {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            address_contact_name: address_contact_name || null,
+            address_post: address_post ? normalizePostalCodeForSubmit(address_post) : null,
+            address_residence: address_residence || null,
+            address_memo: address_memo || null,
+            address_tels_attributes: address_tels,
+            address_emails_attributes: address_emails,
+          }),
+        },
+      );
+      const addressBody = await addressResponse.json().catch(() => ({}));
+
+      if (!addressResponse.ok) {
+        showToast(
+          `プロフィールは更新されましたが、アドレス帳情報の更新に失敗しました。${addressBody.errors?.join("、") ?? ""}`,
+          "error",
+        );
         return;
       }
 
@@ -75,8 +182,8 @@ export default function EmployeeEditForm({ employee, permissionRoles }: Props) {
   }
 
   return (
-    <Card className="max-w-xl">
-      <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
+    <Card className="max-w-2xl">
+      <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-6">
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Input
             id="user_familyname"
@@ -147,6 +254,112 @@ export default function EmployeeEditForm({ employee, permissionRoles }: Props) {
             </p>
           )}
         </div>
+
+        <hr className="border-brand-gray-200" />
+
+        <h2 className="font-medium text-brand-gray-900">アドレス帳情報</h2>
+        <Input
+          id="address_contact_name"
+          label="担当者名（任意）"
+          error={errors.address_contact_name?.message}
+          {...register("address_contact_name")}
+        />
+        <Input
+          id="address_post"
+          label="郵便番号（任意）"
+          placeholder="100-0001"
+          error={errors.address_post?.message}
+          {...register("address_post")}
+        />
+        <Input
+          id="address_residence"
+          label="住所（任意）"
+          error={errors.address_residence?.message}
+          {...register("address_residence")}
+        />
+        <div>
+          <label
+            htmlFor="address_memo"
+            className="mb-1 block text-sm font-medium text-brand-gray-700"
+          >
+            備考（任意）
+          </label>
+          <textarea
+            id="address_memo"
+            rows={3}
+            autoComplete="off"
+            className="w-full rounded-md border border-brand-gray-300 px-3 py-2 focus:border-brand-green-500 focus:outline-none focus:ring-1 focus:ring-brand-green-500"
+            {...register("address_memo")}
+          />
+        </div>
+
+        <div>
+          <div className="mb-2 flex items-center justify-between">
+            <h3 className="font-medium text-brand-gray-900">電話番号</h3>
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() =>
+                telArray.append({
+                  at_number: "",
+                  at_label_type: "mobile",
+                  at_label_free: "",
+                  at_sort: nextSort(telArray.fields),
+                  is_emergency: false,
+                })
+              }
+            >
+              追加
+            </Button>
+          </div>
+          <p className="mb-2 text-sm text-brand-gray-500">
+            並び順1番の電話番号は携帯である必要があります。
+          </p>
+          <div className="flex flex-col gap-3">
+            {telArray.fields.map((field, index) => (
+              <TelFieldRow
+                key={field.id}
+                control={control}
+                register={register}
+                errors={errors}
+                index={index}
+                onRemove={removeTel}
+              />
+            ))}
+          </div>
+        </div>
+
+        <div>
+          <div className="mb-2 flex items-center justify-between">
+            <h3 className="font-medium text-brand-gray-900">メールアドレス</h3>
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() =>
+                emailArray.append({
+                  ae_email: "",
+                  ae_label: "",
+                  ae_sort: nextSort(emailArray.fields),
+                })
+              }
+            >
+              追加
+            </Button>
+          </div>
+          <div className="flex flex-col gap-3">
+            {emailArray.fields.map((field, index) => (
+              <EmailFieldRow
+                key={field.id}
+                control={control}
+                register={register}
+                errors={errors}
+                index={index}
+                onRemove={removeEmail}
+              />
+            ))}
+          </div>
+        </div>
+
         <Button type="submit" disabled={isSubmitting} className="mt-2">
           {isSubmitting ? "更新中..." : "更新"}
         </Button>

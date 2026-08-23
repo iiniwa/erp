@@ -1,4 +1,6 @@
 import { z } from "zod";
+import { isValidPhoneNumber, PHONE_NUMBER_ERROR_MESSAGE } from "@/lib/validation/phone-number";
+import { isValidPostalCode, POSTAL_CODE_ERROR_MESSAGE } from "@/lib/validation/postal-code";
 
 const telSchema = z
   .object({
@@ -18,6 +20,13 @@ const telSchema = z
         message: "自由入力ラベルを入力してください",
       });
     }
+    if (tel.at_number && !isValidPhoneNumber(tel.at_number)) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["at_number"],
+        message: PHONE_NUMBER_ERROR_MESSAGE,
+      });
+    }
   });
 
 const emailSchema = z.object({
@@ -30,13 +39,22 @@ const emailSchema = z.object({
 
 // No address_category_id: employee addresses are always filed under the
 // fixed "社内" category server-side (see EmployeeAddressesController).
-export const employeeAddressSchema = z.object({
+// Spread into lib/validation/employee.ts's updateEmployeeSchema so the
+// employee edit screen can carry both the profile and the address fields
+// in one form (Issue #32: consolidate the two edit screens into one).
+export const addressFields = {
   address_contact_name: z.string().optional().or(z.literal("")),
-  address_post: z.string().optional().or(z.literal("")),
+  address_post: z
+    .string()
+    .optional()
+    .or(z.literal(""))
+    .refine((value) => !value || isValidPostalCode(value), { message: POSTAL_CODE_ERROR_MESSAGE }),
   address_residence: z.string().optional().or(z.literal("")),
   address_memo: z.string().optional().or(z.literal("")),
   address_tels: z.array(telSchema),
   address_emails: z.array(emailSchema),
-});
+};
+
+export const employeeAddressSchema = z.object(addressFields);
 
 export type EmployeeAddressFormValues = z.infer<typeof employeeAddressSchema>;

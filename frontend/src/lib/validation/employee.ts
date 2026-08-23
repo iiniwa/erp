@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { addressFields } from "@/lib/validation/employee-address";
 
 // "区分" is no longer a fixed list: only system_admin is a distinct,
 // protected value (spec section 13.1 — exactly one, never picked on the
@@ -65,7 +66,11 @@ export const createEmployeeSchema = z.object({
 
 export type CreateEmployeeFormValues = z.infer<typeof createEmployeeSchema>;
 
-// No user_birth: only used once, to derive the initial password.
-export const updateEmployeeSchema = z.object({ ...nameFields, ...kubunField });
+// No user_birth: only used once, to derive the initial password. Includes
+// the employee's address book fields too (Issue #32): the edit screen is
+// the one and only place an employee's own address book entry can be
+// changed, so its form is merged into this schema rather than kept on a
+// separate screen/schema.
+export const updateEmployeeSchema = z.object({ ...nameFields, ...kubunField, ...addressFields });
 
 export type UpdateEmployeeFormValues = z.infer<typeof updateEmployeeSchema>;
