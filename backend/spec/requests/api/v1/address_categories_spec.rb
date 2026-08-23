@@ -21,7 +21,7 @@ RSpec.describe "Api::V1::AddressCategories", type: :request do
     end
 
     it "blocks a role with no address_book permission" do
-      no_permission_user = create(:user, user_type: :part_time, user_must_change_password: false)
+      no_permission_user = create(:user, user_type: :general, user_must_change_password: false)
       _session, token = Session.issue_for(user: no_permission_user, mode: :normal)
 
       get "/api/v1/address_categories", headers: authenticated_headers(token)

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { fetchEmployees, type Employee } from "@/lib/api/employees";
-import { userTypeLabels } from "@/lib/validation/employee";
+import { kubunLabel } from "@/lib/validation/employee";
 import DataTable, { type DataTableColumn } from "@/components/ui/DataTable";
 import LinkButton from "@/components/ui/LinkButton";
 
@@ -23,7 +23,7 @@ export default async function EmployeesPage() {
     {
       key: "user_type",
       header: "区分",
-      render: (employee) => userTypeLabels[employee.user_type] ?? employee.user_type,
+      render: (employee) => kubunLabel(employee),
     },
     {
       key: "user_id",

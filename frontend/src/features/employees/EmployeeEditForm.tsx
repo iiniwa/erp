@@ -3,7 +3,13 @@
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { updateEmployeeSchema, type UpdateEmployeeFormValues } from "@/lib/validation/employee";
+import {
+  updateEmployeeSchema,
+  decodeKubun,
+  encodeKubun,
+  KUBUN_GENERAL,
+  type UpdateEmployeeFormValues,
+} from "@/lib/validation/employee";
 import { useToast } from "@/components/ui/ToastProvider";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
@@ -16,6 +22,7 @@ type Props = { employee: Employee; permissionRoles: PermissionRole[] };
 export default function EmployeeEditForm({ employee, permissionRoles }: Props) {
   const router = useRouter();
   const { showToast } = useToast();
+  const isSystemAdmin = employee.user_type === "system_admin";
   const {
     register,
     handleSubmit,
@@ -29,16 +36,19 @@ export default function EmployeeEditForm({ employee, permissionRoles }: Props) {
       user_firstname_ruby: employee.user_firstname_ruby,
       user_join_date: employee.user_join_date ?? "",
       user_id: employee.user_id ?? "",
-      role_id: employee.role_id?.toString() ?? "",
+      kubun: encodeKubun(employee),
     },
   });
 
   async function onSubmit(values: UpdateEmployeeFormValues) {
+    const { kubun, ...rest } = values;
     try {
       const response = await fetch(`/api/employees/${employee.user_code}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...values, role_id: values.role_id || null }),
+        // system_admin's 区分 is fixed (see the hidden field below) — only
+        // role_id is meaningful to send for them, and it stays null.
+        body: JSON.stringify({ ...rest, role_id: decodeKubun(kubun).role_id }),
       });
 
       const body = await response.json().catch(() => ({}));
@@ -99,21 +109,35 @@ export default function EmployeeEditForm({ employee, permissionRoles }: Props) {
           {...register("user_id")}
         />
         <div>
-          <label htmlFor="role_id" className="mb-1 block text-sm font-medium text-brand-gray-700">
-            権限ロール（任意）
+          <label htmlFor="kubun" className="mb-1 block text-sm font-medium text-brand-gray-700">
+            区分
           </label>
-          <select
-            id="role_id"
-            className="min-h-11 w-full rounded-md border border-brand-gray-300 px-3 py-2 focus:border-brand-green-500 focus:outline-none focus:ring-1 focus:ring-brand-green-500"
-            {...register("role_id")}
-          >
-            <option value="">未設定</option>
-            {permissionRoles.map((role) => (
-              <option key={role.role_id} value={role.role_id}>
-                {role.role_name}
-              </option>
-            ))}
-          </select>
+          {isSystemAdmin ? (
+            <>
+              <p className="min-h-11 flex items-center text-brand-gray-700">
+                システム管理者（変更できません）
+              </p>
+              <input type="hidden" {...register("kubun")} />
+            </>
+          ) : (
+            <select
+              id="kubun"
+              className="min-h-11 w-full rounded-md border border-brand-gray-300 px-3 py-2 focus:border-brand-green-500 focus:outline-none focus:ring-1 focus:ring-brand-green-500"
+              {...register("kubun")}
+            >
+              <option value={KUBUN_GENERAL}>一般（役割未設定）</option>
+              {permissionRoles.map((role) => (
+                <option key={role.role_id} value={role.role_id}>
+                  {role.role_name}
+                </option>
+              ))}
+            </select>
+          )}
+          {errors.kubun && (
+            <p role="alert" className="mt-1 text-sm text-red-600">
+              {errors.kubun.message}
+            </p>
+          )}
         </div>
         <Button type="submit" disabled={isSubmitting} className="mt-2">
           {isSubmitting ? "更新中..." : "更新"}

@@ -5,7 +5,9 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
   createEmployeeSchema,
-  userTypeOptions,
+  decodeKubun,
+  KUBUN_GENERAL,
+  KUBUN_SYSTEM_ADMIN,
   type CreateEmployeeFormValues,
 } from "@/lib/validation/employee";
 import type { PermissionRole } from "@/lib/api/permissions";
@@ -27,20 +29,21 @@ export default function EmployeeCreateForm({
     formState: { errors, isSubmitting },
   } = useForm<CreateEmployeeFormValues>({
     resolver: zodResolver(createEmployeeSchema),
-    // No defaultValue for user_type: without an explicit placeholder, a
+    // No defaultValue for kubun: without an explicit placeholder, a
     // native <select> defaults to its first <option>, which would
-    // silently submit "system_admin" (the highest-privilege value) if the
-    // user never touches the field. The blank placeholder forces an
+    // silently submit "システム管理者" (the highest-privilege value) if
+    // the user never touches the field. The blank placeholder forces an
     // explicit, validated choice instead.
-    defaultValues: { user_type: "" as CreateEmployeeFormValues["user_type"] },
+    defaultValues: { kubun: "" },
   });
 
   async function onSubmit(values: CreateEmployeeFormValues) {
+    const { kubun, ...rest } = values;
     try {
       const response = await fetch("/api/employees", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...values, role_id: values.role_id || null }),
+        body: JSON.stringify({ ...rest, ...decodeKubun(kubun) }),
       });
 
       const body = await response.json().catch(() => ({}));
@@ -88,44 +91,28 @@ export default function EmployeeCreateForm({
         </div>
 
         <div>
-          <label htmlFor="user_type" className="mb-1 block text-sm font-medium text-brand-gray-700">
+          <label htmlFor="kubun" className="mb-1 block text-sm font-medium text-brand-gray-700">
             区分
           </label>
           <select
-            id="user_type"
+            id="kubun"
             className="min-h-11 w-full rounded-md border border-brand-gray-300 px-3 py-2 focus:border-brand-green-500 focus:outline-none focus:ring-1 focus:ring-brand-green-500"
-            {...register("user_type")}
+            {...register("kubun")}
           >
             <option value="">選択してください</option>
-            {userTypeOptions.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-          {errors.user_type && (
-            <p role="alert" className="mt-1 text-sm text-red-600">
-              {errors.user_type.message}
-            </p>
-          )}
-        </div>
-
-        <div>
-          <label htmlFor="role_id" className="mb-1 block text-sm font-medium text-brand-gray-700">
-            権限ロール（任意）
-          </label>
-          <select
-            id="role_id"
-            className="min-h-11 w-full rounded-md border border-brand-gray-300 px-3 py-2 focus:border-brand-green-500 focus:outline-none focus:ring-1 focus:ring-brand-green-500"
-            {...register("role_id")}
-          >
-            <option value="">未設定</option>
+            <option value={KUBUN_SYSTEM_ADMIN}>システム管理者</option>
+            <option value={KUBUN_GENERAL}>一般（役割未設定）</option>
             {permissionRoles.map((role) => (
               <option key={role.role_id} value={role.role_id}>
                 {role.role_name}
               </option>
             ))}
           </select>
+          {errors.kubun && (
+            <p role="alert" className="mt-1 text-sm text-red-600">
+              {errors.kubun.message}
+            </p>
+          )}
         </div>
 
         <Input

@@ -10,12 +10,18 @@ class User < ApplicationRecord
   # that kind of exact-match lookup impossible.
   encrypts :user_auth_key, deterministic: true
 
+  # Only 3 states remain here: system_admin and retired are protected,
+  # non-role-based statuses (see single_system_admin below and the
+  # dedicated #retire action), and general is the catch-all for every
+  # other employee. What used to be separate user_type values (manager/
+  # clerical/part_time) are now expressed as freely admin-managed
+  # PermissionRole assignments (role_id) instead of a fixed enum — "区分"
+  # in the UI is that role, not a hardcoded employment category. 2/3/5
+  # are intentionally left unused rather than reassigned, since old data
+  # (if any existed) would otherwise silently change meaning.
   enum :user_type, {
     system_admin: 1,
-    manager: 2,
-    clerical: 3,
     general: 4,
-    part_time: 5,
     retired: 9
   }, validate: true
 
