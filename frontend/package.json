@@ -14,7 +14,7 @@
     "@hookform/resolvers": "^5.9.1",
     "next": "16.3.1",
     "react": "19.2.8",
-    "react-dom": "19.2.8",
+    "react-dom": "19.3.1",
     "react-hook-form": "^7.85.0",
     "zod": "^4.4.3"
   },
